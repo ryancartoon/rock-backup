@@ -1,0 +1,100 @@
+package main
+
+import (
+	"fmt"
+	"github.com/spf13/cobra"
+	"gorm.io/datatypes"
+	"rockbackup/backend/schedules"
+	"rockbackup/backend/service"
+	"strconv"
+	"strings"
+)
+
+type PolicyOptions struct {
+	Name         string
+	Retention    uint
+	Type         string
+	RepositoryID uint
+	DataPath     string
+	HostName     string
+	StartTime    string
+	FullSchedule string
+	IncrSchedule string
+	// Full      string
+	// Incr      string
+}
+
+var (
+	policyOptions PolicyOptions
+	NilTime       = datatypes.NewTime(0, 0, 0, 0)
+)
+
+var cmdPolicy = &cobra.Command{
+	Use:   "policy",
+	Short: "manage backup policy",
+	Long: `
+the "policy" command manages backup settings like, add, update, show policy
+	`,
+	Example: `
+rock policy add 
+rock policy show
+	`,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		source := &service.BackupSource{
+			SourceType: policyOptions.Type,
+			Name:       policyOptions.Name,
+			DataPath:   policyOptions.DataPath,
+		}
+
+		policy := &service.Policy{
+			Retention:    30,
+			Status:       service.ServiceStatusServing,
+			RepositoryID: policyOptions.RepositoryID,
+		}
+
+		startTime, err := convStrToTime(policyOptions.StartTime)
+		if err != nil {
+		}
+
+		full := schedules.Schedule{Cron: policyOptions.FullSchedule, StartTime: startTime}
+		incr := schedules.Schedule{Cron: policyOptions.IncrSchedule, StartTime: startTime}
+
+		err = BackupSvc.OpenFile(source, policy, []schedules.Schedule{full, incr})
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdPolicy)
+
+	p := cmdPolicy.Flags()
+	p.UintVarP(&policyOptions.Retention, "retention", "r", 30, "retention to keep a backup snapshots")
+	p.StringVarP(&policyOptions.Name, "name", "", "", "policy name")
+	p.StringVarP(&policyOptions.DataPath, "path", "", "", "the path of data")
+	p.StringVarP(&policyOptions.DataPath, "type", "", "", "the type of backup source")
+	p.StringVarP(&policyOptions.HostName, "host", "", "", "source host")
+}
+
+func convStrToTime(s string) (datatypes.Time, error) {
+	parts := strings.Split(s, ":")
+	if len(parts) < 3 {
+		return NilTime, fmt.Errorf("bad format of time: %v", s)
+	}
+
+	hour, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return NilTime, err
+	}
+
+	min, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return NilTime, err
+	}
+
+	sec, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return NilTime, err
+	}
+
+	return datatypes.NewTime(hour, min, sec, 0), nil
+}

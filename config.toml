@@ -1,0 +1,13 @@
+
+[database]
+dialect = "postgres"
+host = "localhost"
+port = "5678"
+user = "postgres"
+password = "passw@rd"
+dbname = "db1"
+dsn =  "host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai"
+
+[redis]
+addr = "localhost"
+db = "0"
