@@ -24,13 +24,14 @@ type TimeScheduler struct {
 
 type Schedule struct {
 	gorm.Model
-	ID          uint
-	PolicyID    uint
-	Cron        string
-	StartTime   datatypes.Time
-	Duration    time.Duration
-	BackupType  string
-	Description string
+	ID          uint           `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
+	PolicyID    uint           `json:"policy_id" gorm:"column:policy_id"`
+	Cron        string         `json:"cron" gorm:"column:cron"`
+	StartTime   datatypes.Time `json:"start_time" gorm:"column:start_time"`
+	Duration    time.Duration  `json:"duration" gorm:"column:duration"`
+	BackupType  string         `json:"backup_type" gorm:"column:backup_type"`
+	Description string         `json:"description" gorm:"column:description"`
+	IsEnabled   bool           `json:"is_enabled" gorm:"column:is_enabled"`
 }
 
 type DB interface {
@@ -51,6 +52,7 @@ func New(config *viper.Viper, db DB, starter TimerStarter, cron *gocron.Cron) *T
 		starter:    starter,
 		config:     config,
 		ste:        &ScheduleToEntry{m: make(map[uint]gocron.EntryID)},
+		stopping:   make(chan struct{}),
 	}
 }
 
@@ -80,7 +82,7 @@ func (s *TimeScheduler) AddSchedules(scheds []Schedule) error {
 
 	for i := range scheds {
 		sch := scheds[i]
-		entryID, err := s.cron.AddJob(sch.Cron, queueJob{s, sch.PolicyID, sch.ID, sch.BackupType})
+		entryID, err := s.cron.AddJob(sch.Cron, gocronJob{s.starter, sch.PolicyID, sch.ID, sch.BackupType})
 
 		if err != nil {
 			return err
@@ -92,6 +94,7 @@ func (s *TimeScheduler) AddSchedules(scheds []Schedule) error {
 }
 
 func (s *TimeScheduler) init() {
+	logger.Info("init schedules")
 	schs, _ := s.db.GetAllEnabledSchedules()
 
 	for _, sch := range schs {
@@ -101,56 +104,61 @@ func (s *TimeScheduler) init() {
 
 		entryID, _ := s.cron.AddJob(
 			sch.Cron,
-			queueJob{s: s, policyID: sch.PolicyID, scheduleID: sch.ID, backupType: sch.BackupType},
+			gocronJob{starter: s.starter, policyID: sch.PolicyID, scheduleID: sch.ID, backupType: sch.BackupType},
 		)
 
 		s.ste.update(sch.ID, entryID)
 	}
 
 	s.cronInitialized = true
+	logger.Info("schedules is initialized")
 }
 
 func (s *TimeScheduler) Start() {
+	logger.Info("Start the schedules")
 	var once sync.Once
 
 	once.Do(s.init)
 
 	// start cron
 	s.cron.Start()
+	s.started = true
 
 runningLoop:
 	for {
 		select {
 		case <-time.After(time.Hour):
-			logger.Debug("schedule manmger heart is beating")
+			logger.Info("schedules heart is beating")
 		case <-s.stopping:
-			logger.Info("stopping schedules maanger")
+			logger.Info("stopping schedules")
 			s.cron.Stop()
 			break runningLoop
 		}
 	}
+
 	logger.Info("schedules manager is stopped")
 }
 
 func (s *TimeScheduler) Stop() {
+	logger.Info("stopping time scheduler")
 	if s.started {
 		s.stopping <- struct{}{}
 		s.started = false
 	}
 }
 
-type queueJob struct {
-	s          *TimeScheduler
+type gocronJob struct {
+	starter    TimerStarter
 	policyID   uint
 	scheduleID uint
 	backupType string
 }
 
-func (q queueJob) Run() {
+func (g gocronJob) Run() {
 	operator := "backup scheduler"
-	err := q.s.starter.TimerStartBackup(q.policyID, q.backupType, operator)
+	err := g.starter.TimerStartBackup(g.policyID, g.backupType, operator)
 
 	if err != nil {
-		logger.Errorf("schedule backup job for schedule:[%d], policy[%d] failed", q.scheduleID, q.policyID)
+		logger.Errorf("schedule backup job for schedule:[%d], policy[%d] failed", g.scheduleID, g.policyID)
 	}
 }

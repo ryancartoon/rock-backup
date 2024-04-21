@@ -5,11 +5,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	// "rockbackup/backend/api"
+	"rockbackup/backend/api"
 	"rockbackup/backend/db"
-	// "rockbackup/backend/handlers"
 	"rockbackup/backend/scheduler"
-	// "rockbackup/backend/schedules"
+	"rockbackup/backend/schedules"
 	"rockbackup/backend/service"
 	"sync"
 
@@ -129,14 +128,11 @@ var cmdScheduler = &cobra.Command{
 		sched := scheduler.New(Config, DB, asyncHandler)
 
 		cron := gocron.New()
-		// handler := handlers.New()
-		// tSched := schedules.New(Config, DB, handler, cron)
+		schedulesHandler := schedules.NewHandler(sched)
+		tSched := schedules.New(Config, DB, schedulesHandler, cron)
 
-		// BackupSvc := service.New(DB, tSched)
-		// webapi := api.New(BackupSvc)
-		//
-		// cronJobs := housekeeping.NewHouseKeepingCrons(DB, Config, LogPath)
-		// cront := crontab.NewCrontab(gocron, cronJobs)
+		BackupSvc := service.New(DB, tSched)
+		webapi := api.New(BackupSvc)
 
 		wg.Add(1)
 		go func() {
@@ -150,28 +146,27 @@ var cmdScheduler = &cobra.Command{
 			sched.Start()
 		}()
 
-		// wg.Add(1)
-		// go func() {
-		// 	defer wg.Done()
-		// 	tSched.Start()
-		// }()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tSched.Start()
+		}()
 
-		// wg.Add(1)
-		// go func() {
-		// 	defer wg.Done()
-		// 	webapi.Start()
-		// }()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			webapi.Start()
+		}()
 
 		go func() {
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, os.Interrupt)
 			<-c
-			// cancel()
 			// stop web api first
-			// webapi.Stop()
-			// tSched.Stop()
+			webapi.Stop()
+			tSched.Stop()
 			sched.Stop()
-			// cron.Stop()
+			cron.Stop()
 			fmt.Println("App is interrupted")
 		}()
 

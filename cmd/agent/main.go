@@ -20,7 +20,7 @@ var (
 )
 
 func init() {
-	initLogger()
+	// initLogger()
 	intCmd()
 }
 

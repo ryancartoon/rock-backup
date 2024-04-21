@@ -30,7 +30,7 @@ type WebAPI struct {
 func (a *WebAPI) Start() {
 	router := a.NewRouter()
 	a.server = &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8000",
 		Handler: router,
 	}
 
@@ -56,7 +56,22 @@ func (a *WebAPI) Stop() {
 
 func (a *WebAPI) NewRouter() *gin.Engine {
 	r := gin.Default()
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		// your custom format
+		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
+			param.ClientIP,
+			param.TimeStamp.Format(time.RFC1123),
+			param.Method,
+			param.Path,
+			param.Request.Proto,
+			param.StatusCode,
+			param.Latency,
+			param.Request.UserAgent(),
+			param.ErrorMessage,
+		)
+	}))
 	r.POST("/service/file/open", GenOpenFileServiceHandler(a.ServiceEntry))
+	r.GET("/service/file/get", GenGetPolicyHandler(a.ServiceEntry))
 	// r.POST("/service/db/open", GenOpenDBServiceHandler(a.ServicEntry))
 
 	return r
@@ -70,27 +85,22 @@ func (e *BadRequestErr) Error() string {
 	return e.message
 }
 
-type BackupSource struct {
-	// SourceType string `json:"source_type"`
-	Name     string `json:"name"`
-	DataPath string `json:"data_path"`
-	Hostname string `json:"hostname"`
-}
-
 type OpenServiceRequest struct {
-	Source             BackupSource `json:"source"`
-	BackupPlan         uint         `json:"backup_plan"`
-	FullBackupSchedule string       `json:"full_backup_schedule"`
-	IncrBackupSchedule string       `json:"incr_backup_schedule"`
-	LogBackupSchedule  string       `json:"log_backup_schedule"` // hours
-	Retention          uint         `json:"retention"`
-	BackupCycle        uint         `json:"backup_cycle"`
-	StartTime          string       `json:"start_time"`
-	Duration           uint         `json:"duration"`
-	RepositoryID       uint         `json:"repository_id"`
+	SourcePath         string `json:"source_path"`
+	Hostname           string `json:"hostname"`
+	BackupPlan         uint   `json:"backup_plan"`
+	Retention          uint   `json:"retention"`
+	FullBackupSchedule string `json:"full_backup_schedule"`
+	IncrBackupSchedule string `json:"incr_backup_schedule"`
+	LogBackupSchedule  string `json:"log_backup_schedule"` // hours
+	StartTime          string `json:"start_time"`
+	RepositoryID       uint   `json:"repository_id"`
+	// Duration           uint   `json:"duration"`
+	// BackupCycle        uint   `json:"backup_cycle"`
 }
 
 type Response struct {
+	Result interface{}
 }
 
 func verifyOpenServiceRequst(r *OpenServiceRequest) *BadRequestErr {
@@ -107,9 +117,9 @@ func decodeServoceOpenReuqest(c *gin.Context) (*OpenServiceRequest, error) {
 		return nil, err
 	}
 
-	if err := verifyOpenServiceRequst(&request); err != nil {
-		return nil, err
-	}
+	// if err := verifyOpenServiceRequst(&request); err != nil {
+	// 	return nil, err
+	// }
 
 	return &request, nil
 }
@@ -142,7 +152,7 @@ func GenOpenFileServiceHandler(s service.BackupServiceI) func(*gin.Context) {
 		r, err := decodeServoceOpenReuqest(c)
 
 		if err != nil {
-			c.JSON(http.StatusOK, gin.H{})
+			c.JSON(http.StatusOK, gin.H{"error": err})
 			return
 		}
 
@@ -150,19 +160,19 @@ func GenOpenFileServiceHandler(s service.BackupServiceI) func(*gin.Context) {
 
 		source := &service.BackupSource{
 			SourceType: "file",
-			Name:       r.Source.Name,
-			DataPath:   r.Source.DataPath,
+			SourcePath: r.SourcePath,
 		}
 
 		policy := &service.Policy{
-			Retention:    30,
+			Retention:    r.Retention,
 			Status:       service.ServiceStatusServing,
 			RepositoryID: r.RepositoryID,
+			Hostname:     r.Hostname,
 		}
 
 		startTime, err := convStrToTime(r.StartTime)
 		if err != nil {
-			c.JSON(http.StatusOK, policy)
+			c.JSON(http.StatusOK, gin.H{"error": err})
 			return
 		}
 
@@ -180,34 +190,56 @@ func GenOpenFileServiceHandler(s service.BackupServiceI) func(*gin.Context) {
 	}
 }
 
-// func GenOpenDBServiceHandler(s service.BackupServiceI) func(*gin.Context) {
-// 	return func(c *gin.Context) {
-// 		r, err := decodeServoceOpenReuqest(c)
-//
-// 		source := &service.BackupSource{
-// 			SourceType: r.BackupSource.SourceType,
-// 			Name:       r.BackupSource.SourceName,
-// 			DataPath:   r.BackupSource.DataPath,
-// 		}
-//
-// 		startTime, err := convStrToTime(r.StartTime)
-// 		if err != nil {
-// 			c.JSON(http.StatusOK, gin.H{})
-// 		}
-//
-// 		full := schedules.Schedule{Cron: r.FullBackupSchedule, StartTime: startTime}
-// 		incr := schedules.Schedule{Cron: r.IncrBackupSchedule, StartTime: startTime}
-// 		log := schedules.Schedule{Cron: r.LogBackupSchedule, StartTime: startTime}
-//
-// 		err = s.OpenFile(source, []schedules.Schedule{full, incr, log}, r.Retention)
-//
-// 		if err != nil {
-// 			c.JSON(http.StatusOK, gin.H{})
-// 		}
-//
-// 		c.JSON(http.StatusOK, gin.H{})
-// 	}
-// }
+func GenGetPolicyHandler(s service.BackupServiceI) func(*gin.Context) {
+
+	return func(c *gin.Context) {
+		logger.Info("request is received.")
+
+		ps, err := s.GetPolicies()
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+
+		fmt.Printf("%v", ps)
+
+		c.JSON(http.StatusOK, ps)
+	}
+}
+
+func GenOpenDBServiceHandler(s service.BackupServiceI) func(*gin.Context) {
+	return func(c *gin.Context) {
+		r, err := decodeServoceOpenReuqest(c)
+
+		sourceType := "file"
+		name := sourceType + r.SourcePath
+		source := &service.BackupSource{
+			SourceType: sourceType,
+			SourcePath: r.SourcePath,
+			SourceName: name,
+		}
+
+		startTime, err := convStrToTime(r.StartTime)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{})
+		}
+
+		full := schedules.Schedule{Cron: r.FullBackupSchedule, StartTime: startTime}
+		incr := schedules.Schedule{Cron: r.IncrBackupSchedule, StartTime: startTime}
+		log := schedules.Schedule{Cron: r.LogBackupSchedule, StartTime: startTime}
+
+		var policy *service.Policy
+
+		err = s.OpenFile(source, policy, []schedules.Schedule{full, incr, log})
+
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{})
+		}
+
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
 
 func GenCloseServiceHandler(s service.BackupServiceI) func(c *gin.Context) {
 	return func(c *gin.Context) {

@@ -10,6 +10,7 @@ type mhandler struct{}
 
 func (h *mhandler) StartBackup(policyID uint) error     { return nil }
 func (h *mhandler) StartRestore(backupsetID uint) error { return nil }
+func (m *mdb) AddSchedulerJob() error                   { return nil }
 
 func TestSchedulerStart(t *testing.T) {
 	db := &mdb{}

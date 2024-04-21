@@ -3,11 +3,21 @@ package scheduler
 import (
 	"github.com/spf13/viper"
 	"rockbackup/backend/backupset"
+	"rockbackup/backend/repository"
+	"rockbackup/backend/schedulerjob"
+	"rockbackup/backend/service"
 	"sync"
 	"time"
 )
 
+type SchedulerJob struct {
+	schedulerjob.Job
+	Repository repository.Repository
+}
+
 type DB interface {
+	AddSchedulerJob(*schedulerjob.Job) error
+	GetPolicy(uint) (service.Policy, error)
 }
 
 type Handler interface {
@@ -24,7 +34,7 @@ type JobResult struct {
 func New(config *viper.Viper, db DB, handler Handler) *Scheduler {
 	return &Scheduler{
 		db:             db,
-		newJobCh:       make(chan SchedulerJob),
+		newJobCh:       make(chan schedulerjob.Job),
 		resultCh:       make(chan JobResult),
 		DeleteBackupCh: make(chan backupset.Backupset),
 		stoppingCh:     make(chan struct{}),
@@ -34,7 +44,7 @@ func New(config *viper.Viper, db DB, handler Handler) *Scheduler {
 
 type Scheduler struct {
 	db             DB
-	newJobCh       chan SchedulerJob
+	newJobCh       chan schedulerjob.Job
 	resultCh       chan JobResult
 	DeleteBackupCh chan backupset.Backupset
 	stoppingCh     chan struct{}
@@ -51,10 +61,12 @@ RunningLoop:
 	for {
 		select {
 		case job := <-s.newJobCh:
-			if err := s.AddJob(job); err != nil {
+			logger.Infof("received a new job: %v", job)
+			if err := s.AddJob(&job); err != nil {
 				logger.Error(err)
 			}
 		case result := <-s.resultCh:
+			logger.Infof("received result: %v", result)
 			if err := s.completeJob(result.JobID, result.Status, result.ErrMessage); err != nil {
 				logger.Error(err)
 			}
@@ -84,11 +96,30 @@ func (s *Scheduler) Stop() {
 }
 
 func (s *Scheduler) ScheduleDelete(bset backupset.Backupset) {
-
 }
 
-func (s *Scheduler) AddJob(job SchedulerJob) error {
+type BackupJobSpec struct {
+}
+
+func (s *Scheduler) StartBackupJob(policyID uint, backupType string, operator string) error {
+	job := schedulerjob.NewBackupJob(policyID, backupType, operator)
+
+	policy, err := s.db.GetPolicy(policyID)
+
+	if err != nil {
+		return err
+	}
+
+	job.RepositoryID = policy.RepositoryID
+	job.Hostname = policy.Hostname
+
+	s.newJobCh <- job
+
 	return nil
+}
+
+func (s *Scheduler) AddJob(job *schedulerjob.Job) error {
+	return s.db.AddSchedulerJob(job)
 }
 
 func (s *Scheduler) completeJob(id uint, status string, msg string) error {
