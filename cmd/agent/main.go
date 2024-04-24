@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	pb "rockbackup/proto"
 )
 
 var (
@@ -17,23 +20,24 @@ var (
 	GrpcPort int = 50061
 	logger   *logrus.Logger
 	LogPath  = filepath.Join(AppHome, "logs")
+	cmdRoot  *cobra.Command
 )
 
 func init() {
 	// initLogger()
-	intCmd()
+	initCmd()
 }
 
 func initCmd() {
 	cmdRoot.AddCommand(cmdAgent)
 }
 
-var cmdAent = &cobra.Command{
+var cmdAgent = &cobra.Command{
 	Use:   "start",
 	Short: "rockbackup agent",
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx, cancel := context.WithCancel(context.Backupgroud)
-		start(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
+		start(ctx, cancel)
 	},
 }
 
@@ -42,10 +46,13 @@ func start(ctx context.Context, cancel context.CancelFunc) {
 }
 
 type Agent struct {
-	proto.UnimplementedAgentServer
+	pb.UnimplementedAgentServer
 }
 
-func (a *Agent) Start(ctx context.Context) {
+func (a *Agent) RunCMD(ctx context.Context) {
+}
+
+func Serve(ctx context.Context, agent *Agent) {
 	addr := fmt.Sprintf(":%d", GrpcPort)
 
 	lis, err := net.Listen("tcp", addr)
@@ -59,11 +66,11 @@ func (a *Agent) Start(ctx context.Context) {
 
 	go func() {
 		logger.Info("registering agent server")
-		proto.RegistrAgentServer(s, a)
-		reflection.Register(s)
+		s.RegistrAgentServer(s, agent)
+		// reflection.Register(s)
 		logger.Info("grpc server serving")
 
-		if err := s.Serve(lis); err != hnil {
+		if err := s.Serve(lis); err != nil {
 			logger.Fatal(err)
 		}
 	}()
@@ -73,6 +80,17 @@ func (a *Agent) Start(ctx context.Context) {
 	logger.Info("grpc server stopped")
 }
 
-// func (a *Agent) StartBackup(ctx context.Context, req *proto.BackupRequest) (*proto.StartJobReponse, error) {
-//
-// }
+func (a *Agent) RunCmd(ctx context.Context, req *pb.CmdRequest) (*pb.CmdReply, error) {
+	cmd := exec.Command(req.Cmd)
+	cmd.Env = append(cmd.Env, req.Env)
+	stdout, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.CmdReply{
+		ReturnCode: int32(cmd.ProcessState.ExitCode()),
+		Stdout:     string(stdout),
+		Stderr:     "", // Assuming you want to leave stderr empty for now
+	}, nil
+}

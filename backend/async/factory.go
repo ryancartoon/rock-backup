@@ -14,14 +14,14 @@ func initDB() {
 	DB = db.InitTest()
 }
 
-type JobDB interface {
+type FactoryDB interface {
 	LoadRepository(id uint) (*repository.Repository, error)
 	LoadPolicy(id uint) (service.Policy, error)
 	LoadJob(id uint) (*schedulerjob.Job, error)
 }
 
 type Factory struct {
-	db DB
+	db FactoryDB
 }
 
 func (f *Factory) StartBackupFile(id, policyID uint) error {

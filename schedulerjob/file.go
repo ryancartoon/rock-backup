@@ -11,9 +11,9 @@ import (
 type DB interface {
 }
 
-func NewFileBackupSchedulerJob(job schedulerjob.Job, db DB) *FileBackupSchedulerJob {
-
-	return &FileBackupSchedulerJob{job, restic}
+func NewFileBackupSchedulerJob(job scheduler.SchedulerJob, db DB) *FileBackupSchedulerJob {
+	restic := Restic{}
+	return &FileBackupSchedulerJob{SchedulerJob: job, Restic: restic}
 }
 
 type FileBackupSchedulerJob struct {
@@ -44,8 +44,14 @@ func (j *FileBackupSchedulerJob) Run(policy service.Policy, repo repository.Repo
 
 type Restic struct{}
 
-func (r *Restic) InitRepo()                                   {}
-func (r *Restic) StartBackup(agent agentd.Agent, repo string) {}
+func (r *Restic) InitRepo(agent agentd.Agent, repo repository.Repository) error {
+	rsCmd := ["restic", "init" "--repo", repo.String()]
+	out, err := agent.Run(rsCmd)
+}
+
+func (r *Restic) StartBackup(agent agentd.Agent, repo string) {
+
+}
 
 func RunCmdAgent(agent agentd.Agent, cmd string, env map[string]string) ([]byte, error) {
 	var out []byte

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option go_package = "rockbackup/proto";
+
+package proto;
+
+
+
+service Agent {
+  rpc RunCmd (RunCmdRequest) returns (RunCmdReply) {}
+}
+
+message RunCmdRequest {
+  string cmd = 1;
+  string env = 2;
+}
+message RunCmdReply {
+    int32 return_code = 1;
+    string stdout = 2;
+    string stderr = 3;
+}
