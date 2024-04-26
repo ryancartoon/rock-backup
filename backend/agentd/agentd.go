@@ -1,9 +1,10 @@
 package agentd
 
 import (
+	"context"
+	pb "rockbackup/proto"
+
 	"google.golang.org/grpc"
-	"net"
-	"os"
 )
 
 const (
@@ -13,6 +14,7 @@ const (
 type Agent struct {
 	Host string
 	Port uint
+	Conn pb.AgentClient
 }
 
 type Agentd struct {
@@ -23,25 +25,25 @@ func (a Agentd) GetAgent(host string) (Agent, error) {
 	return Agent{}, nil
 }
 
-func (a *Agent) RunCmd() (returnCode int, stdout []byte, stderr []byte) {
-	return
+func (a *Agent) RunCmd(ctx context.Context, name string, env string) (int, string, string, error) {
+	resp, err := a.Conn.RunCmd(ctx, &pb.CmdRequest{Cmd: name, Env: env})
+
+	// Contact the server and print out its response.
+	if err != nil {
+		logger.Errorf("could not run command: %v", err)
+		return 0, "", "", err
+	}
+
+	return int(resp.ReturnCode), resp.Stdout, resp.Stderr, nil
 }
 
 func (a *Agent) Connect() error {
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:50001", grpc.WithInsecure())
 	if err != nil {
 		logger.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewRemoteServiceClient(conn)
+	a.Conn = pb.NewAgentClient(conn)
 
-	// Contact the server and print out its response.
-	name := defaultName
-	if len(os.Args) > 1 {
-		name = os.Args[1]
-	}
-	r, err := c.RunCmd(context.Background(), &pb.CommandRequest{Command: name})
-	if err != nil {
-		log.Fatalf("could not greet: %v", err)
-	}
+	return nil
 }

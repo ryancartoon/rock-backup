@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
-	"os/exec"
-	"path/filepath"
-
+	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"io"
+	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
 	pb "rockbackup/proto"
 )
 
@@ -20,16 +22,36 @@ var (
 	GrpcPort int = 50061
 	logger   *logrus.Logger
 	LogPath  = filepath.Join(AppHome, "logs")
-	cmdRoot  *cobra.Command
 )
 
+var cmdRoot = &cobra.Command{
+	Use:   "rock_agent",
+	Short: "rock agent",
+	Long:  "rock agent",
+}
+
 func init() {
-	// initLogger()
+	initLogger()
 	initCmd()
 }
 
 func initCmd() {
 	cmdRoot.AddCommand(cmdAgent)
+}
+
+func initLogger() {
+	logger = logrus.New()
+	logFile := &lumberjack.Logger{
+		Filename:   filepath.Join(LogPath, "rock.log"),
+		MaxSize:    100,
+		MaxBackups: 5,
+		MaxAge:     30,
+		Compress:   true,
+		LocalTime:  true,
+	}
+
+	logger.SetOutput(io.MultiWriter(logFile, os.Stdout))
+	logger.SetLevel(logrus.DebugLevel)
 }
 
 var cmdAgent = &cobra.Command{
@@ -43,30 +65,30 @@ var cmdAgent = &cobra.Command{
 
 func start(ctx context.Context, cancel context.CancelFunc) {
 	logger.Info("starting agent")
+
+	agent := &Agent{}
+	agent.Serve(ctx)
 }
 
 type Agent struct {
 	pb.UnimplementedAgentServer
 }
 
-func (a *Agent) RunCMD(ctx context.Context) {
-}
-
-func Serve(ctx context.Context, agent *Agent) {
+func (a *Agent) Serve(ctx context.Context) {
 	addr := fmt.Sprintf(":%d", GrpcPort)
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		logger.Fatal("listen error: %v", err)
+		logger.Fatalf("listen error: %v", err)
 	}
 
 	logger.Infof("agnet listen at %s", addr)
 
-	s := grpc.NewsServer()
+	s := grpc.NewServer()
 
 	go func() {
 		logger.Info("registering agent server")
-		s.RegistrAgentServer(s, agent)
+		pb.RegisterAgentServer(s, a)
 		// reflection.Register(s)
 		logger.Info("grpc server serving")
 
@@ -93,4 +115,10 @@ func (a *Agent) RunCmd(ctx context.Context, req *pb.CmdRequest) (*pb.CmdReply, e
 		Stdout:     string(stdout),
 		Stderr:     "", // Assuming you want to leave stderr empty for now
 	}, nil
+}
+
+func main() {
+	if err := cmdRoot.Execute(); err != nil {
+		logger.Fatalf("Error: %v", err)
+	}
 }
