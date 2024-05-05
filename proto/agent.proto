@@ -11,11 +11,12 @@ service Agent {
 }
 
 message RunCmdRequest {
-  string cmd = 1;
-  string env = 2;
+  string name = 1;
+  repeated string args = 2;
+  repeated string envs = 3;
 }
 message RunCmdReply {
     int32 return_code = 1;
-    string stdout = 2;
-    string stderr = 3;
+    bytes stdout = 2;
+    bytes stderr = 3;
 }

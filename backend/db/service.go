@@ -43,7 +43,6 @@ func (db *DB) SaveService(src *service.BackupSource, policy *service.Policy, sch
 	return nil
 }
 
-// func (db *DB) GetPolicies() ([]service.PolicyView, error) {
 func (db *DB) GetPolicies() ([]service.PolicyView, error) {
 
 	var ps []service.PolicyView

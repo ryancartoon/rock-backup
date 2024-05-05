@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"rockbackup/backend/api"
+	"rockbackup/backend/async"
+	"rockbackup/backend/async/taskdef"
 	"rockbackup/backend/db"
 	"rockbackup/backend/scheduler"
 	"rockbackup/backend/schedules"
@@ -106,8 +108,7 @@ var cmdStartWorker = &cobra.Command{
 			},
 		)
 		mux := asynq.NewServeMux()
-		// mux.HandleFunc(taskdef.TaskTypeBackup, task.BackupTaskr)
-		// mux.HandeFunc(taskdef.TaskTypeRestore, tasks.RestoreTask)
+		mux.HandleFunc(taskdef.TaskTypeBackupJobFile, async.HandleBackupFileTask)
 
 		if err := srv.Run(mux); err != nil {
 			logger.Fatalf("could not run server: %v", err)

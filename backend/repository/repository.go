@@ -10,7 +10,8 @@ type RepositoryI interface {
 
 type Repository struct {
 	gorm.Model
-	ID   uint `gorm:"primaryKey;autoIncrement"`
-	Name string
-	Type string
+	ID         uint `gorm:"primaryKey;autoIncrement"`
+	Name       string
+	Type       string
+	MountPoint string
 }

@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentClient interface {
-	RunCmd(ctx context.Context, in *CmdRequest, opts ...grpc.CallOption) (*CmdReply, error)
+	RunCmd(ctx context.Context, in *RunCmdRequest, opts ...grpc.CallOption) (*RunCmdReply, error)
 }
 
 type agentClient struct {
@@ -37,8 +37,8 @@ func NewAgentClient(cc grpc.ClientConnInterface) AgentClient {
 	return &agentClient{cc}
 }
 
-func (c *agentClient) RunCmd(ctx context.Context, in *CmdRequest, opts ...grpc.CallOption) (*CmdReply, error) {
-	out := new(CmdReply)
+func (c *agentClient) RunCmd(ctx context.Context, in *RunCmdRequest, opts ...grpc.CallOption) (*RunCmdReply, error) {
+	out := new(RunCmdReply)
 	err := c.cc.Invoke(ctx, Agent_RunCmd_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (c *agentClient) RunCmd(ctx context.Context, in *CmdRequest, opts ...grpc.C
 // All implementations must embed UnimplementedAgentServer
 // for forward compatibility
 type AgentServer interface {
-	RunCmd(context.Context, *CmdRequest) (*CmdReply, error)
+	RunCmd(context.Context, *RunCmdRequest) (*RunCmdReply, error)
 	mustEmbedUnimplementedAgentServer()
 }
 
@@ -58,7 +58,7 @@ type AgentServer interface {
 type UnimplementedAgentServer struct {
 }
 
-func (UnimplementedAgentServer) RunCmd(context.Context, *CmdRequest) (*CmdReply, error) {
+func (UnimplementedAgentServer) RunCmd(context.Context, *RunCmdRequest) (*RunCmdReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunCmd not implemented")
 }
 func (UnimplementedAgentServer) mustEmbedUnimplementedAgentServer() {}
@@ -75,7 +75,7 @@ func RegisterAgentServer(s grpc.ServiceRegistrar, srv AgentServer) {
 }
 
 func _Agent_RunCmd_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CmdRequest)
+	in := new(RunCmdRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func _Agent_RunCmd_Handler(srv interface{}, ctx context.Context, dec func(interf
 		FullMethod: Agent_RunCmd_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServer).RunCmd(ctx, req.(*CmdRequest))
+		return srv.(AgentServer).RunCmd(ctx, req.(*RunCmdRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

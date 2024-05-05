@@ -19,7 +19,7 @@ import (
 var (
 	AppHome  = "."
 	Config   *viper.Viper
-	GrpcPort int = 50061
+	GrpcPort int = 50001
 	logger   *logrus.Logger
 	LogPath  = filepath.Join(AppHome, "logs")
 )
@@ -102,18 +102,19 @@ func (a *Agent) Serve(ctx context.Context) {
 	logger.Info("grpc server stopped")
 }
 
-func (a *Agent) RunCmd(ctx context.Context, req *pb.CmdRequest) (*pb.CmdReply, error) {
-	cmd := exec.Command(req.Cmd)
-	cmd.Env = append(cmd.Env, req.Env)
+func (a *Agent) RunCmd(ctx context.Context, req *pb.RunCmdRequest) (*pb.RunCmdReply, error) {
+	cmd := exec.Command(req.Name, req.Args...)
+	cmd.Env = append(cmd.Env, req.Envs...)
 	stdout, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.CmdReply{
+	logger.Infof("%v", string(stdout))
+
+	return &pb.RunCmdReply{
 		ReturnCode: int32(cmd.ProcessState.ExitCode()),
-		Stdout:     string(stdout),
-		Stderr:     "", // Assuming you want to leave stderr empty for now
+		Stdout:     stdout,
 	}, nil
 }
 

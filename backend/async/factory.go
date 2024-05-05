@@ -1,10 +1,13 @@
 package async
 
 import (
+	"context"
 	"rockbackup/backend/agentd"
+	"rockbackup/backend/async/taskdef"
 	"rockbackup/backend/db"
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
+	fjob "rockbackup/backend/schedulerjob/file"
 	"rockbackup/backend/service"
 )
 
@@ -15,35 +18,46 @@ func initDB() {
 }
 
 type FactoryDB interface {
+	LoadJob(id uint) (schedulerjob.Job, error)
 	LoadRepository(id uint) (*repository.Repository, error)
 	LoadPolicy(id uint) (service.Policy, error)
-	LoadJob(id uint) (*schedulerjob.Job, error)
+	LoadAgent(hostname string) (*agentd.Agent, error)
 }
 
 type Factory struct {
 	db FactoryDB
 }
 
-func (f *Factory) StartBackupFile(id, policyID uint) error {
-	policy, err := f.db.LoadPolicy(policyID)
+func (f *Factory) StartBackupJobFile(ctx context.Context, p taskdef.BackupJobPayload, db schedulerjob.JobDB) error {
+	job, err := f.db.LoadJob(p.ID)
 
 	if err != nil {
 		return err
 	}
 
-	repo, err := f.LoadRepo(policy.RepositoryID)
+	policy, err := f.db.LoadPolicy(job.PolicyID)
 
 	if err != nil {
 		return err
 	}
 
-	job := schedulerjob.NewFileBackupSchedulerJob(id)
-	job.Run(policy, repo, agent)
+	repo, err := f.db.LoadRepository(policy.RepositoryID)
+
+	if err != nil {
+		return err
+	}
+
+	agent, err := f.db.LoadAgent(job.Hostname)
+
+	if err != nil {
+		return err
+	}
+
+	filejob := fjob.NewFileBackupSchedulerJob(job)
+	filejob.Run(ctx, db, policy, repo, agent)
 
 	return nil
 }
-
-func (f *Factory) LoadAgent() {}
 
 func (f *Factory) LoadRepo(id uint) (*repository.Repository, error) {
 	var repo *repository.Repository
