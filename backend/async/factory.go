@@ -4,23 +4,17 @@ import (
 	"context"
 	"rockbackup/backend/agentd"
 	"rockbackup/backend/async/taskdef"
-	"rockbackup/backend/db"
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
 	fjob "rockbackup/backend/schedulerjob/file"
 	"rockbackup/backend/service"
 )
 
-var DB *db.DB
-
-func initDB() {
-	DB = db.InitTest()
-}
 
 type FactoryDB interface {
-	LoadJob(id uint) (schedulerjob.Job, error)
+	LoadJob(id uint) (*schedulerjob.Job, error)
 	LoadRepository(id uint) (*repository.Repository, error)
-	LoadPolicy(id uint) (service.Policy, error)
+	LoadPolicy(id uint) (*service.Policy, error)
 	LoadAgent(hostname string) (*agentd.Agent, error)
 }
 

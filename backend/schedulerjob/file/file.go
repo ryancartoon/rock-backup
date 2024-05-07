@@ -32,11 +32,11 @@ type ResticBackupResponse struct {
 	TotolDuration       float32 `json:"totol_duration"` // TODO check restic total duration data type
 }
 
-func NewFileBackupSchedulerJob(job schedulerjob.Job) *FileBackupSchedulerJob {
+func NewFileBackupSchedulerJob(job *schedulerjob.Job) *FileBackupSchedulerJob {
 	envs := []string{"RESTIC_PASSWORD=redhat"}
 	args := []string{"--json"}
 	restic := Restic{"/usr/bin/restic", envs, args}
-	return &FileBackupSchedulerJob{job, restic}
+	return &FileBackupSchedulerJob{*job, restic}
 }
 
 type FileBackupSchedulerJob struct {
@@ -44,7 +44,13 @@ type FileBackupSchedulerJob struct {
 	Restic Restic
 }
 
-func (j *FileBackupSchedulerJob) Run(ctx context.Context, db schedulerjob.JobDB, policy service.Policy, repo *repository.Repository, agent *agentd.Agent) error {
+func (j *FileBackupSchedulerJob) Run(
+	ctx context.Context,
+	db schedulerjob.JobDB,
+	policy *service.Policy,
+	repo *repository.Repository,
+	agent *agentd.Agent,
+) error {
 
 	agent.Connect()
 	defer agent.Close()
@@ -90,7 +96,12 @@ func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *reposi
 	return nil
 }
 
-func (r *Restic) Backup(ctx context.Context, sourcePath string, agent *agentd.Agent, repo *repository.Repository) (string, int64, int64, error) {
+func (r *Restic) Backup(
+	ctx context.Context,
+	sourcePath string,
+	agent *agentd.Agent,
+	repo *repository.Repository,
+) (string, int64, int64, error) {
 	args := []string{"backup", sourcePath, "--repo", repo.MountPoint}
 	args = append(args, r.GlobalArgs...)
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)

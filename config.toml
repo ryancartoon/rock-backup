@@ -9,5 +9,5 @@ dbname = "db1"
 dsn =  "host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai"
 
 [redis]
-addr = "localhost"
+addr = "localhost:6379"
 db = "0"

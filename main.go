@@ -108,7 +108,7 @@ var cmdStartWorker = &cobra.Command{
 			},
 		)
 		mux := asynq.NewServeMux()
-		mux.HandleFunc(taskdef.TaskTypeBackupJobFile, async.HandleBackupFileTask)
+		mux.HandleFunc(taskdef.TaskTypeBackupJobFile, async.MakeHandleBackupFileTask(Config, DB, DB))
 
 		if err := srv.Run(mux); err != nil {
 			logger.Fatalf("could not run server: %v", err)
