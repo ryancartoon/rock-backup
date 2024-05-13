@@ -29,6 +29,7 @@ func (a Agentd) GetAgent(host string) (Agent, error) {
 
 func (a *Agent) RunCmd(ctx context.Context, name string, args []string, envs []string) (int, []byte, []byte, error) {
 	err := a.Connect()
+	// defer a.Close()
 
 	if err != nil {
 		logger.Errorf("connect error: %v", err)

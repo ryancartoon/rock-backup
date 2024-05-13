@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/natefinch/lumberjack"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"google.golang.org/grpc"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	pb "rockbackup/proto"
+
+	"github.com/natefinch/lumberjack"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -103,10 +104,13 @@ func (a *Agent) Serve(ctx context.Context) {
 }
 
 func (a *Agent) RunCmd(ctx context.Context, req *pb.RunCmdRequest) (*pb.RunCmdReply, error) {
+	logger.Infof("received request %v", req)
 	cmd := exec.Command(req.Name, req.Args...)
 	cmd.Env = append(cmd.Env, req.Envs...)
+	logger.Info("running command")
 	stdout, err := cmd.Output()
 	if err != nil {
+		logger.Errorf("running command error: %v", err)
 		return nil, err
 	}
 

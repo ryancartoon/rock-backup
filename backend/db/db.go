@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	// "time"
+	"fmt"
+	"time"
 
 	// "rockbackup/backend"
 	// "github.com/spf13/viper"
@@ -40,7 +41,8 @@ func (d *DB) AutoMigrate() error {
 func InitTest() *DB {
 	appHome := "."
 
-	logPath := filepath.Join(appHome, "logs", "testing.log")
+	now := time.Now().Unix()
+	logPath := filepath.Join(appHome, "logs", fmt.Sprintf("%s-%d.%s", "testing", now, "log"))
 	logFh, _ := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE, 0600)
 	l := logger.New(
 		log.New(logFh, "\r\n", log.LstdFlags), // io writer

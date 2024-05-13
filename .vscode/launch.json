@@ -4,6 +4,15 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        // {
+        //     "name": "rock-agent",
+        //     "request": "launch",
+        //     "type": "go",
+        //     "mode": "auto",
+        //     "program": "${workspaceRoot}/cmd/agent/main.go",
+        //     "env": {},
+        //     "args": ["start"]
+        // }
         {
             "name": "rock-asynq-worker",
             "request": "launch",
@@ -12,15 +21,15 @@
             "program": "${workspaceRoot}",
             "env": {},
             "args": ["worker"]
-        },
-        {
-            "name": "rock-server",
-            "request": "launch",
-            "type": "go",
-            "mode": "auto",
-            "program": "${workspaceRoot}",
-            "env": {},
-            "args": ["server"]
         }
+        // {
+        //     "name": "rock-server",
+        //     "request": "launch",
+        //     "type": "go",
+        //     "mode": "auto",
+        //     "program": "${workspaceRoot}",
+        //     "env": {},
+        //     "args": ["server"]
+        // }
     ]
 }

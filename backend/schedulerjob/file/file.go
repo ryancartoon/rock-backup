@@ -1,6 +1,7 @@
 package filejob
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -51,10 +52,6 @@ func (j *FileBackupSchedulerJob) Run(
 	repo *repository.Repository,
 	agent *agentd.Agent,
 ) error {
-
-	agent.Connect()
-	defer agent.Close()
-
 	var err error
 
 	if j.BackupType == "Full" {
@@ -121,8 +118,11 @@ func (r *Restic) Backup(
 		return "", 0, 0, errors.New(string(stdout))
 	}
 
+	lines := bytes.Split(stdout, []byte("\n"))
+	summary := lines[len(lines) - 2]
+
 	resp := &ResticBackupResponse{}
-	err = json.Unmarshal(stdout, resp)
+	err = json.Unmarshal(summary, resp)
 
 	if err != nil {
 		return "", 0, 0, err

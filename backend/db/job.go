@@ -4,10 +4,19 @@ import "rockbackup/backend/schedulerjob"
 
 func (db *DB) SaveBackupError(id uint, errMessage string) {
 	db.g.Model(&schedulerjob.Job{}).Where("id = ?", id).Updates(
-		map[string]interface{}{"error_message": errMessage},
+		map[string]interface{}{"error_message": errMessage, "status": "failed"},
 	)
 }
 
 func (db *DB) SaveBackupResult(id uint, snapID string, size int64, fileNum int64) error {
+	db.g.Model(&schedulerjob.Job{}).Where("id = ?", id).Updates(
+		map[string]interface{}{
+			"external_backupset_id": snapID,
+			"status":                "completed",
+			"size":                  size,
+			"file_num":              fileNum,
+		},
+	)
+
 	return nil
 }

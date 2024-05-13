@@ -40,7 +40,10 @@ func (db *DB) LoadRepository(id uint) (*repository.Repository, error) {
 
 func (db *DB) LoadPolicy(id uint) (*service.Policy, error) {
 	var p service.Policy
-	if result := db.g.First(&p, id); result.Error != nil {
+	// if result := db.g.Joins("left join backup_sources on policies.backup_source_id = backup_sources.id").First(&p, id); result.Error != nil {
+	// 	return nil, result.Error
+	// }
+	if result := db.g.InnerJoins("BackupSource").First(&p, id); result.Error != nil {
 		return nil, result.Error
 	}
 	return &p, nil
