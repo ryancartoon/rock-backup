@@ -13,23 +13,23 @@
         //     "env": {},
         //     "args": ["start"]
         // }
-        {
-            "name": "rock-asynq-worker",
-            "request": "launch",
-            "type": "go",
-            "mode": "auto",
-            "program": "${workspaceRoot}",
-            "env": {},
-            "args": ["worker"]
-        }
         // {
-        //     "name": "rock-server",
+        //     "name": "rock-asynq-worker",
         //     "request": "launch",
         //     "type": "go",
         //     "mode": "auto",
         //     "program": "${workspaceRoot}",
         //     "env": {},
-        //     "args": ["server"]
+        //     "args": ["worker"]
         // }
+        {
+            "name": "rock-server",
+            "request": "launch",
+            "type": "go",
+            "mode": "auto",
+            "program": "${workspaceRoot}",
+            "env": {},
+            "args": ["server"]
+        }
     ]
 }

@@ -1,9 +1,10 @@
 package schedules
 
 import (
-	"gorm.io/datatypes"
 	"sync"
 	"time"
+
+	"gorm.io/datatypes"
 
 	gocron "github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
@@ -24,14 +25,14 @@ type TimeScheduler struct {
 
 type Schedule struct {
 	gorm.Model
-	ID          uint           `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
-	PolicyID    uint           `json:"policy_id" gorm:"column:policy_id"`
-	Cron        string         `json:"cron" gorm:"column:cron"`
-	StartTime   datatypes.Time `json:"start_time" gorm:"column:start_time"`
-	Duration    time.Duration  `json:"duration" gorm:"column:duration"`
+	ID          uint           `json:"id"          gorm:"column:id;primaryKey;autoIncrement"`
+	PolicyID    uint           `json:"policy_id"   gorm:"column:policy_id"`
+	Cron        string         `json:"cron"        gorm:"column:cron"`
+	StartTime   datatypes.Time `json:"start_time"  gorm:"column:start_time"`
+	Duration    time.Duration  `json:"duration"    gorm:"column:duration"`
 	BackupType  string         `json:"backup_type" gorm:"column:backup_type"`
 	Description string         `json:"description" gorm:"column:description"`
-	IsEnabled   bool           `json:"is_enabled" gorm:"column:is_enabled"`
+	IsEnabled   bool           `json:"is_enabled"  gorm:"column:is_enabled"`
 }
 
 type DB interface {
@@ -56,15 +57,15 @@ func New(config *viper.Viper, db DB, starter TimerStarter, cron *gocron.Cron) *T
 	}
 }
 
-type BackupSchedule struct {
-	ID            uint
-	PolicyID      uint
-	BackupType    string
-	Schedule      string
-	Duration      int
-	NextStartTIme time.Time
-	IsEnabled     bool
-}
+// type BackupSchedule struct {
+// 	ID            uint
+// 	PolicyID      uint
+// 	BackupType    string
+// 	Schedule      string
+// 	Duration      int
+// 	NextStartTIme time.Time
+// 	IsEnabled     bool
+// }
 
 type ScheduleToEntry struct {
 	mu sync.Mutex

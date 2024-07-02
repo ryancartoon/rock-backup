@@ -43,29 +43,10 @@ func (db *DB) SaveService(src *service.BackupSource, policy *service.Policy, sch
 	return nil
 }
 
-func (db *DB) GetPolicies() ([]service.PolicyView, error) {
-
-	var ps []service.PolicyView
-
-	result := db.g.Table("policies").Select(
-		`
-		backup_sources.id, 
-		backup_sources.source_name,
-		backup_sources.source_type,
-		policies.id, 
-		policies.retention,
-		policies.status,
-		policies.schedule_desc,
-		hosts.name as hostname
-		`,
-	).Joins(
-		"left join backup_sources on policies.backup_source_id = backup_sources.id",
-	).Joins(
-		"left join hosts on policies.hostname = hosts.name",
-	).Scan(&ps)
-
-	if result.Error != nil {
-		return []service.PolicyView{}, result.Error
+func (db *DB) GetPolicies() ([]service.Policy, error) {
+	var ps []service.Policy
+	if result := db.g.Table("policies").InnerJoins("BackupSource").Find(&ps); result.Error != nil {
+		return nil, result.Error
 	}
 
 	return ps, nil

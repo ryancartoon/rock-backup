@@ -29,14 +29,14 @@ type BackupSource struct {
 // Policy backup policy
 type Policy struct {
 	gorm.Model
-	ID             uint                  `gorm:"column:id;primaryKey;autoIncrement"`
-	Retention      uint                  `gorm:"column:retention"`
-	BackupSourceID uint                  `gorm:"column:backup_source_id"`
-	BackupSource   BackupSource          `gorm:"column:backup_source"`
-	Hostname       string                `gorm:"column:hostname"`
-	Status         string                `gorm:"column:status"`
-	RepositoryID   uint                  `gorm:"column:repository_id"`
-	Repository     repository.Repository `gorm:"column:repository"`
-	ScheduleDesc   string                `gorm:"column:schedule_desc"`
+	ID             uint                   `gorm:"column:id;primaryKey;autoIncrement"`
+	Retention      uint                   `gorm:"column:retention"`
+	BackupSourceID uint                   `gorm:"column:backup_source_id"`
+	BackupSource   *BackupSource          `gorm:"column:backup_source"`
+	Hostname       string                 `gorm:"column:hostname"`
+	Status         string                 `gorm:"column:status"`
+	RepositoryID   uint                   `gorm:"column:repository_id"`
+	Repository     *repository.Repository `gorm:"column:repository"`
+	ScheduleDesc   string                 `gorm:"column:schedule_desc"`
 	// BackupCycle  uint
 }

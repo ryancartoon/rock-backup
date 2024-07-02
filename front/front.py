@@ -1,3 +1,4 @@
+import logging
 import requests
 import urllib.parse
 
@@ -30,6 +31,7 @@ class PolicyController:
             incr_backup_schedule=incr_cron,
             start_time=start_time,
         )
+        logging.info("open file service payload: %s", payload)
         resp = self.request.post(url, json=payload)
         return resp
 
@@ -100,7 +102,7 @@ def show_file_policy_form():
         ],
         validate=validate_policy,
     )
-    policy_controller.add_file(
+    result = policy_controller.add_file(
         data["source_path"],
         data["hostname"],
         data["retention"],
@@ -108,6 +110,9 @@ def show_file_policy_form():
         data["full_backup_day"],
         data["start_time"],
     )
+    breakpoint()
+    logging.info("response status code: %s", result.status_code)
+    logging.info("response: %s", result.json())
 
     toast("Policy Added successfully")
 
