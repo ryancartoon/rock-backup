@@ -3,9 +3,9 @@ package db
 import (
 	"rockbackup/backend/agentd"
 	"rockbackup/backend/host"
+	"rockbackup/backend/policy"
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
-	"rockbackup/backend/service"
 )
 
 func (db *DB) LoadJob(id uint) (*schedulerjob.Job, error) {
@@ -38,8 +38,8 @@ func (db *DB) LoadRepository(id uint) (*repository.Repository, error) {
 	return &r, nil
 }
 
-func (db *DB) LoadPolicy(id uint) (*service.Policy, error) {
-	var p service.Policy
+func (db *DB) LoadPolicy(id uint) (*policy.Policy, error) {
+	var p policy.Policy
 	if result := db.g.InnerJoins("BackupSource").First(&p, id); result.Error != nil {
 		return nil, result.Error
 	}

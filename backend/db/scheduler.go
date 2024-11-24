@@ -9,10 +9,28 @@ func (db *DB) GetOnGoingJobs() (jobs []scheduler.JobInSchedule, err error) {
 	var sjobs []schedulerjob.Job
 
 	result := db.g.Model(&sjobs).Where(
-		"status = ? OR status =? OR status = ?", 
-		schedulerjob.SchedulerJobStatusQueued, 
+		"status = ? OR status =? OR status = ?",
+		schedulerjob.SchedulerJobStatusQueued,
 		schedulerjob.SchedulerJobStatusRunning,
 		schedulerjob.SchedulerJobStatusCreated,
+	).Find(&sjobs)
+
+	if result.Error != nil {
+		return nil, err
+	}
+
+	for _, job := range sjobs {
+		jobs = append(jobs, scheduler.JobInSchedule{Job: job})
+	}
+
+	return jobs, nil
+}
+
+func (db *DB) GetJobsInschedule() (jobs []scheduler.JobInSchedule, err error) {
+	var sjobs []schedulerjob.Job
+
+	result := db.g.Model(&sjobs).Where(
+		"in_schedule = ?", true,
 	).Find(&sjobs)
 
 	if result.Error != nil {

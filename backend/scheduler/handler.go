@@ -15,7 +15,7 @@ type AsyncHandler struct {
 	asynq *asynq.Client
 }
 
-func (h *AsyncHandler) Handle(job JobInSchedule) error {
+func (h *AsyncHandler) Start(job JobInSchedule) error {
 
 	if job.JobType == schedulerjob.JobTypeBackupFile {
 		return h.StartBackup(job)

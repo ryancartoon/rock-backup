@@ -104,11 +104,15 @@ func (a *Agent) Serve(ctx context.Context) {
 }
 
 func (a *Agent) RunCmd(ctx context.Context, req *pb.RunCmdRequest) (*pb.RunCmdReply, error) {
+
 	logger.Infof("received request %v", req)
+
 	cmd := exec.Command(req.Name, req.Args...)
 	cmd.Env = append(cmd.Env, req.Envs...)
-	logger.Info("running command")
+
+	logger.Infof("running command: %s", cmd.String())
 	stdout, err := cmd.Output()
+
 	if err != nil {
 		logger.Errorf("running command error: %v", err)
 		return nil, err

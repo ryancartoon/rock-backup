@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"rockbackup/backend/log"
 	"rockbackup/backend/service"
 	"strconv"
 	"strings"
@@ -12,6 +13,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
 )
+
+var logger = log.New("api.log")
+
+// var logger *logrus.Entry
+
+// func init() {
+// 	logName := "backend.log"
+// 	l := log.New(logName)
+// 	logger = l.WithField("compoent", "api")
+// }
 
 type OpenServiceRequest struct {
 	SourcePath         string `json:"source_path"`
@@ -27,12 +38,17 @@ type OpenServiceRequest struct {
 	BackupCycle        uint   `json:"backup_cycle"`
 }
 
+type StartBackupJobRequest struct {
+	PolicyID   string `json:"policy_id"`
+	BackupType string `json:"backup_type"`
+}
+
 var (
 	NilTime = datatypes.NewTime(0, 0, 0, 0)
 )
 
-func New(service service.BackupServiceI) *WebAPI {
-	return &WebAPI{ServiceEntry: service}
+func New(s service.BackupServiceI) *WebAPI {
+	return &WebAPI{ServiceEntry: s}
 }
 
 type WebAPI struct {
@@ -58,12 +74,12 @@ func (a *WebAPI) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := a.server.Shutdown(ctx); err != nil {
-		logger.Fatal("Server Shutdown:", err)
+		logger.Fatalf("Server Shutdown:", err)
 	}
 
 	select {
 	case <-ctx.Done():
-		logger.Println("timeout of 5 seconds.")
+		logger.Info("timeout of 5 seconds.")
 	}
 }
 
@@ -85,6 +101,7 @@ func (a *WebAPI) NewRouter() *gin.Engine {
 	}))
 	r.POST("/service/file/open", GenOpenFileServiceHandler(a.ServiceEntry))
 	r.GET("/service/file/get", GenGetPolicyHandler(a.ServiceEntry))
+	r.POST("/backup/job", GenStartBackupJobHandler(a.ServiceEntry))
 	// r.POST("/service/db/open", GenOpenDBServiceHandler(a.ServicEntry))
 
 	return r
@@ -121,6 +138,16 @@ func decodeServoceOpenReuqest(c *gin.Context) (OpenServiceRequest, error) {
 	// }
 
 	return request, nil
+}
+
+func decocdeStartBackupJobRequest(c *gin.Context) (StartBackupJobRequest, error) {
+	var r StartBackupJobRequest
+
+	if err := c.BindJSON(&r); err != nil {
+		return StartBackupJobRequest{}, err
+	}
+
+	return r, nil
 }
 
 type CloseServiceRequest struct {
@@ -203,6 +230,37 @@ func GenGetPolicyHandler(s service.BackupServiceI) func(*gin.Context) {
 		fmt.Printf("%v", ps)
 
 		c.JSON(http.StatusOK, ps)
+	}
+}
+
+func GenStartBackupJobHandler(s service.BackupServiceI) func(*gin.Context) {
+	return func(c *gin.Context) {
+		logger.Info("request is received.")
+
+		r, err := decocdeStartBackupJobRequest(c)
+		logger.Infof("%v\n", r)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": err})
+			return
+		}
+
+		logger.Info("request is decoded.")
+
+		policyID, err := strconv.ParseUint(r.PolicyID, 10, 0)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+
+		err = s.StartBackupJob(uint(policyID), r.BackupType)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
+
 	}
 }
 

@@ -11,9 +11,9 @@ import (
 	// "rockbackup/backend"
 	// "github.com/spf13/viper"
 	"rockbackup/backend/host"
+	"rockbackup/backend/policy"
 	"rockbackup/backend/schedulerjob"
 	"rockbackup/backend/schedules"
-	"rockbackup/backend/service"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -26,8 +26,8 @@ type DB struct {
 
 func (d *DB) AutoMigrate() error {
 	if err := d.g.AutoMigrate(
-		&service.BackupSource{},
-		&service.Policy{},
+		&policy.BackupSource{},
+		&policy.Policy{},
 		&schedules.Schedule{},
 		&host.Host{},
 		&schedulerjob.Job{},
@@ -42,7 +42,7 @@ func InitTest() *DB {
 	appHome := "."
 
 	now := time.Now().Unix()
-	logPath := filepath.Join(appHome, "logs", fmt.Sprintf("%s-%d.%s", "testing", now, "log"))
+	logPath := filepath.Join(appHome, "logs", fmt.Sprintf("%s-%d.%s", "db", now, "log"))
 	logFh, _ := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE, 0600)
 	l := logger.New(
 		log.New(logFh, "\r\n", log.LstdFlags), // io writer
@@ -64,13 +64,13 @@ func InitTest() *DB {
 	return &DB{gdb}
 }
 
-func (db *DB) GetPolicy(id uint) (service.Policy, error) {
-	var p service.Policy
+func (db *DB) GetPolicy(id uint) (policy.Policy, error) {
+	var p policy.Policy
 
 	result := db.g.Joins("BackupSource").First(&p, id)
 
 	if result.Error != nil {
-		return service.Policy{}, result.Error
+		return policy.Policy{}, result.Error
 	}
 
 	return p, nil

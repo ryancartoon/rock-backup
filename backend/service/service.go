@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"rockbackup/backend/policy"
+	"rockbackup/backend/scheduler"
 	"rockbackup/backend/schedules"
 
 	"gorm.io/datatypes"
@@ -48,13 +50,14 @@ type PolicyRequest struct {
 }
 
 type PolicyWithSource struct {
-	Policy
-	BackupSource
+	policy.Policy
+	policy.BackupSource
 }
 
 type BackupServiceI interface {
 	OpenFile(PolicyRequest) error
 	GetPolicies() ([]PolicyView, error)
+	StartBackupJob(policyID uint, backupType string) error
 	// OpenDB(src *BackupSource, policy *Policy, schs []schedules.Schedule) error Close(srcID uint) error }
 }
 
@@ -64,23 +67,20 @@ type JobStarter interface {
 }
 
 type DB interface {
-	SaveService(*BackupSource, *Policy, []schedules.Schedule) error
-	GetPolicies() ([]Policy, error)
+	SaveService(*policy.BackupSource, *policy.Policy, []schedules.Schedule) error
+	GetPolicies() ([]policy.Policy, error)
 	HasSource(ID uint) bool
 }
 
-func New(db DB, sched *schedules.TimeScheduler) *BackupService {
-	return &BackupService{db: db, timeSched: sched}
+func New(db DB, sched *schedules.TimeScheduler, scheduler *scheduler.Scheduler) *BackupService {
+	return &BackupService{db: db, timeSched: sched, scheduler: scheduler}
 }
 
 type BackupService struct {
 	timeSched *schedules.TimeScheduler
+	scheduler *scheduler.Scheduler
 	db        DB
 }
-
-//	func New(sm ScheduleMan, sched Scheduler, db DB) {
-//		return &BackupService{sm, sched, db}
-//	}
 
 func (s *BackupService) OpenFile(req PolicyRequest) error {
 
@@ -88,20 +88,20 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 
 	sourceType := "file"
 
-	src := &BackupSource{
+	src := &policy.BackupSource{
 		SourceType: sourceType,
 		SourcePath: req.BackupSourcePath,
 	}
 
-	policy := &Policy{
+	policy := &policy.Policy{
 		Retention:    req.Retention,
-		Status:       ServiceStatusServing,
+		Status:       policy.ServiceStatusServing,
 		RepositoryID: req.RepositoryID,
 		Hostname:     req.Hostname,
 	}
 
-	full := schedules.Schedule{Cron: req.FullBackupSchedule, StartTime: req.StartTime}
-	incr := schedules.Schedule{Cron: req.IncrBackupSchedule, StartTime: req.StartTime}
+	full := schedules.Schedule{Cron: req.FullBackupSchedule, StartTime: req.StartTime, IsEnabled: true}
+	incr := schedules.Schedule{Cron: req.IncrBackupSchedule, StartTime: req.StartTime, IsEnabled: true}
 	schs = []schedules.Schedule{full, incr}
 
 	// src.SourceName = src.SourcePath
@@ -122,7 +122,7 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 	return nil
 }
 
-func (s *BackupService) OpenDB(src BackupSource, policy *Policy, schs []schedules.Schedule) error {
+func (s *BackupService) OpenDB(src policy.BackupSource, policy *policy.Policy, schs []schedules.Schedule) error {
 
 	if s.hasSource(src.SourceName) {
 		return ResourceAlreadyExistError
@@ -169,4 +169,10 @@ func (s *BackupService) GetPolicies() ([]PolicyView, error) {
 	}
 
 	return pvs, nil
+}
+
+func (s *BackupService) StartBackupJob(policyID uint, backupType string) error {
+	operator := "api"
+	s.scheduler.AddSchedulerJobBackup(policyID, backupType, operator)
+	return nil
 }

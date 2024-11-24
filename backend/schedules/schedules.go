@@ -97,6 +97,7 @@ func (s *TimeScheduler) AddSchedules(scheds []Schedule) error {
 func (s *TimeScheduler) init() {
 	logger.Info("init schedules")
 	schs, _ := s.db.GetAllEnabledSchedules()
+	logger.Errorf("num of enabled cron: [%d]", len(schs))
 
 	for _, sch := range schs {
 		if _, err := s.specParser.Parse(sch.Cron); err != nil {
@@ -121,6 +122,7 @@ func (s *TimeScheduler) Start() {
 
 	once.Do(s.init)
 
+	//todo cron does not start
 	// start cron
 	s.cron.Start()
 	s.started = true

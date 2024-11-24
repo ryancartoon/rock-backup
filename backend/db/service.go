@@ -1,8 +1,8 @@
 package db
 
 import (
+	"rockbackup/backend/policy"
 	"rockbackup/backend/schedules"
-	"rockbackup/backend/service"
 
 	"gorm.io/gorm"
 )
@@ -12,7 +12,7 @@ func (db *DB) HasSource(id uint) bool {
 }
 
 // SaveService method
-func (db *DB) SaveService(src *service.BackupSource, policy *service.Policy, schs []schedules.Schedule) error {
+func (db *DB) SaveService(src *policy.BackupSource, policy *policy.Policy, schs []schedules.Schedule) error {
 
 	err := db.g.Transaction(func(tx *gorm.DB) error {
 		if result := tx.Create(src); result.Error != nil {
@@ -43,8 +43,8 @@ func (db *DB) SaveService(src *service.BackupSource, policy *service.Policy, sch
 	return nil
 }
 
-func (db *DB) GetPolicies() ([]service.Policy, error) {
-	var ps []service.Policy
+func (db *DB) GetPolicies() ([]policy.Policy, error) {
+	var ps []policy.Policy
 	if result := db.g.Table("policies").InnerJoins("BackupSource").Find(&ps); result.Error != nil {
 		return nil, result.Error
 	}

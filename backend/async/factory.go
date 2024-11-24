@@ -2,19 +2,19 @@ package async
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
 	"rockbackup/backend/agentd"
 	"rockbackup/backend/async/taskdef"
+	"rockbackup/backend/policy"
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
 	fjob "rockbackup/backend/schedulerjob/file"
-	"rockbackup/backend/service"
 )
-
 
 type FactoryDB interface {
 	LoadJob(id uint) (*schedulerjob.Job, error)
 	LoadRepository(id uint) (*repository.Repository, error)
-	LoadPolicy(id uint) (*service.Policy, error)
+	LoadPolicy(id uint) (*policy.Policy, error)
 	LoadAgent(hostname string) (*agentd.Agent, error)
 }
 
@@ -23,31 +23,39 @@ type Factory struct {
 }
 
 func (f *Factory) StartBackupJobFile(ctx context.Context, p taskdef.BackupJobPayload, db schedulerjob.JobDB) error {
+	logger.Info("load job")
 	job, err := f.db.LoadJob(p.ID)
+
+	log := logger.WithFields(logrus.Fields{"job_id": p.ID})
 
 	if err != nil {
 		return err
 	}
 
+	log.Info("load policy")
 	policy, err := f.db.LoadPolicy(job.PolicyID)
 
 	if err != nil {
 		return err
 	}
 
+	log.Info("load repo")
+	policy, err = f.db.LoadPolicy(job.PolicyID)
 	repo, err := f.db.LoadRepository(policy.RepositoryID)
 
 	if err != nil {
 		return err
 	}
 
+	log.Info("load agent")
 	agent, err := f.db.LoadAgent(job.Hostname)
 
 	if err != nil {
 		return err
 	}
 
-	filejob := fjob.NewFileBackupSchedulerJob(job)
+	log.Info("start to run job")
+	filejob := fjob.NewFileBackupSchedulerJob(job, log)
 	filejob.Run(ctx, db, policy, repo, agent)
 
 	return nil

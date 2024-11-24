@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"rockbackup/backend/agentd"
+	"rockbackup/backend/log"
+	"rockbackup/backend/policy"
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
-	"rockbackup/backend/service"
 )
+
+var logger = log.New("agent.log")
 
 var (
 	ResticBackupFatalError  = errors.New("restic fatal error - no snapshot created")
@@ -33,28 +36,31 @@ type ResticBackupResponse struct {
 	TotolDuration       float32 `json:"totol_duration"` // TODO check restic total duration data type
 }
 
-func NewFileBackupSchedulerJob(job *schedulerjob.Job) *FileBackupSchedulerJob {
+func NewFileBackupSchedulerJob(job *schedulerjob.Job, log *log.Logger) *FileBackupSchedulerJob {
 	envs := []string{"RESTIC_PASSWORD=redhat"}
 	args := []string{"--json"}
 	restic := Restic{"/usr/bin/restic", envs, args}
-	return &FileBackupSchedulerJob{*job, restic}
+
+	return &FileBackupSchedulerJob{*job, restic, log}
 }
 
 type FileBackupSchedulerJob struct {
 	schedulerjob.Job
 	Restic Restic
+	logger *log.Logger
 }
 
 func (j *FileBackupSchedulerJob) Run(
 	ctx context.Context,
 	db schedulerjob.JobDB,
-	policy *service.Policy,
+	policy *policy.Policy,
 	repo *repository.Repository,
 	agent *agentd.Agent,
 ) error {
 	var err error
 
 	if j.BackupType == "Full" {
+		logger.Info("full backup, init repo")
 		err = j.Restic.InitRepo(ctx, agent, repo)
 
 		if err != nil {
@@ -62,7 +68,11 @@ func (j *FileBackupSchedulerJob) Run(
 		}
 	}
 
+	logger.Info("start to run restic backup")
 	snapID, size, fileNum, err := j.Restic.Backup(ctx, policy.BackupSource.SourcePath, agent, repo)
+
+	logger.Infof("snap id is %s", snapID)
+	logger.Infof("snap size is %d", size)
 
 	if err != nil {
 		db.SaveBackupError(j.ID, err.Error())
@@ -101,7 +111,9 @@ func (r *Restic) Backup(
 ) (string, int64, int64, error) {
 	args := []string{"backup", sourcePath, "--repo", repo.MountPoint}
 	args = append(args, r.GlobalArgs...)
+
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
+
 	if err != nil {
 		return "", 0, 0, err
 	}
@@ -119,7 +131,7 @@ func (r *Restic) Backup(
 	}
 
 	lines := bytes.Split(stdout, []byte("\n"))
-	summary := lines[len(lines) - 2]
+	summary := lines[len(lines)-2]
 
 	resp := &ResticBackupResponse{}
 	err = json.Unmarshal(summary, resp)

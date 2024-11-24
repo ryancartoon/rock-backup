@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"rockbackup/backend/api"
 	"rockbackup/backend/async"
 	"rockbackup/backend/async/taskdef"
 	"rockbackup/backend/db"
+	"rockbackup/backend/log"
 	"rockbackup/backend/scheduler"
 	"rockbackup/backend/schedules"
 	"rockbackup/backend/service"
@@ -20,7 +20,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -29,7 +28,8 @@ var (
 	AppHome     string
 	LogBasePath string
 	Config      *viper.Viper
-	logger      *logrus.Logger
+	logger      *log.Logger
+	cronLogger  *log.Logger
 	RedisOpt    redis.Options
 	WebEngine   *gin.Engine
 	GormLog     string
@@ -55,8 +55,13 @@ func initEnv() {
 }
 
 func initLog() {
-	LogBasePath = filepath.Join(AppHome, "logs")
-	GormLog = filepath.Join(LogBasePath, "gorm.log")
+	// LogBasePath = filepath.Join(AppHome, "logs")
+	// GormLog = filepath.Join(LogBasePath, "gorm.log")
+	// cronLog := filepath.Join(LogBasePath, "cron.log")
+	// backendPath := filepath.Join(LogBasePath, "backend.log")
+
+	logger = log.New("backend.log")
+	cronLogger = log.New("cron.log")
 }
 
 func initConfig() {
@@ -126,13 +131,14 @@ var cmdScheduler = &cobra.Command{
 		asyncHandler := scheduler.NewHandler(asynqClient)
 
 		wg := &sync.WaitGroup{}
-		sched := scheduler.New(Config, DB, asyncHandler)
+		JSched := scheduler.New(Config, DB, asyncHandler)
 
-		cron := gocron.New()
-		schedulesHandler := schedules.NewHandler(sched)
+		gocronLogger := gocron.VerbosePrintfLogger(cronLogger)
+		cron := gocron.New(gocron.WithLogger(gocronLogger))
+		schedulesHandler := schedules.NewHandler(JSched)
 		tSched := schedules.New(Config, DB, schedulesHandler, cron)
 
-		BackupSvc := service.New(DB, tSched)
+		BackupSvc := service.New(DB, tSched, JSched)
 		webapi := api.New(BackupSvc)
 
 		wg.Add(1)
@@ -144,7 +150,7 @@ var cmdScheduler = &cobra.Command{
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sched.Start()
+			JSched.Start()
 		}()
 
 		wg.Add(1)
@@ -166,7 +172,7 @@ var cmdScheduler = &cobra.Command{
 			// stop web api first
 			webapi.Stop()
 			tSched.Stop()
-			sched.Stop()
+			JSched.Stop()
 			cron.Stop()
 			fmt.Println("App is interrupted")
 		}()

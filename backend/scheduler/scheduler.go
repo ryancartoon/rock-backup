@@ -4,14 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"rockbackup/backend/backupset"
+	"rockbackup/backend/log"
+	"rockbackup/backend/policy"
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
-	"rockbackup/backend/service"
 	"sync"
 	"time"
 
 	"github.com/spf13/viper"
 )
+
+var logger *log.Logger
+
+func init() {
+	logName := "job-scheduler"
+	logger = log.New(logName)
+}
 
 type JobInSchedule struct {
 	schedulerjob.Job
@@ -20,13 +28,13 @@ type JobInSchedule struct {
 
 type DB interface {
 	AddSchedulerJob(*schedulerjob.Job) error
-	GetPolicy(uint) (service.Policy, error)
-	GetOnGoingJobs() ([]JobInSchedule, error)
+	GetPolicy(uint) (policy.Policy, error)
+	GetJobsInschedule() ([]JobInSchedule, error)
 	StartJob(id uint) error
 }
 
-type Handler interface {
-	Handle(JobInSchedule) error
+type JobHandler interface {
+	Start(JobInSchedule) error
 }
 
 type JobResult struct {
@@ -35,7 +43,8 @@ type JobResult struct {
 	ErrMessage string
 }
 
-func New(config *viper.Viper, db DB, handler Handler) *Scheduler {
+func New(config *viper.Viper, db DB, handler JobHandler) *Scheduler {
+
 	return &Scheduler{
 		db:             db,
 		newJobCh:       make(chan schedulerjob.Job),
@@ -53,7 +62,7 @@ type Scheduler struct {
 	resultCh       chan JobResult
 	DeleteBackupCh chan backupset.Backupset
 	stoppingCh     chan struct{}
-	handler        Handler
+	handler        JobHandler
 	config         *viper.Viper
 	jobMutex       map[string]struct{}
 
@@ -68,23 +77,11 @@ RunningLoop:
 		select {
 		case job := <-s.newJobCh:
 			logger.Infof("received a new job: %v", job)
-			if err := s.CheckMutex(job); err != nil {
-				logger.Errorf("check mutex failed: %v", err)
-				continue
-			}
 
 			if err := s.addJob(&job); err != nil {
 				logger.Error(err)
 			}
-		case result := <-s.resultCh:
-			logger.Infof("received result: %v", result)
-			if err := s.completeJob(result.JobID, result.Status, result.ErrMessage); err != nil {
-				logger.Error(err)
-			}
 
-			if err := s.Schedule(); err != nil {
-				logger.Error(err)
-			}
 		case bset := <-s.DeleteBackupCh:
 			s.ScheduleDelete(bset)
 		case <-time.After(5 * time.Second):
@@ -103,7 +100,7 @@ RunningLoop:
 
 func (s *Scheduler) CheckMutex(job schedulerjob.Job) error {
 	if job.JobType == schedulerjob.JobTypeBackupFile {
-		key := fmt.Sprintf("%s-%d", job.JobType,job.PolicyID)
+		key := fmt.Sprintf("%s-%d", job.JobType, job.PolicyID)
 
 		if _, ok := s.jobMutex[key]; ok {
 			return errors.New("job mutex occurs")
@@ -133,15 +130,19 @@ func (s *Scheduler) addJob(job *schedulerjob.Job) error {
 	return s.db.AddSchedulerJob(job)
 }
 
-func (s *Scheduler) completeJob(id uint, status string, msg string) error {
-	return nil
-}
+// func (s *Scheduler) completeJob(id uint, status string, msg string) error {
+// 	s.db.CompleteJob()
+// 	key := fmt.Sprintf("%s-%d", job.JobType, job.PolicyID)
+// 	delete(s.jobMutex, key)
+// 	return nil
+// }
 
 func (s *Scheduler) Schedule() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// logger.Info("Scheduling jobs")
 
-	jobs, err := s.db.GetOnGoingJobs()
+	jobs, err := s.db.GetJobsInschedule()
 
 	if err != nil {
 		return err
@@ -162,7 +163,7 @@ func (s *Scheduler) StartJob(job JobInSchedule) error {
 		return err
 	}
 
-	s.handler.Handle(job)
+	s.handler.Start(job)
 
 	return nil
 }
