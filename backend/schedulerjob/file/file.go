@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"rockbackup/backend/agentd"
+	"rockbackup/backend/backupset"
 	"rockbackup/backend/log"
 	"rockbackup/backend/policy"
 	"rockbackup/backend/repository"
@@ -56,6 +57,7 @@ func (j *FileBackupSchedulerJob) Run(
 	policy *policy.Policy,
 	repo *repository.Repository,
 	agent *agentd.Agent,
+	bset *backupset.Backupset,
 ) error {
 	var err error
 
@@ -79,7 +81,7 @@ func (j *FileBackupSchedulerJob) Run(
 		return err
 	}
 
-	err = db.SaveBackupResult(j.ID, snapID, size, fileNum)
+	err = db.SaveBackupResult(j.ID, bset.ID, snapID, size, fileNum)
 
 	if err != nil {
 		return err

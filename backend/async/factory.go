@@ -9,7 +9,13 @@ import (
 	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
 	fjob "rockbackup/backend/schedulerjob/file"
+	"runtime/debug"
 )
+
+type DB interface {
+	FactoryDB
+	repository.RepositoryDB
+}
 
 type FactoryDB interface {
 	LoadJob(id uint) (*schedulerjob.Job, error)
@@ -19,10 +25,16 @@ type FactoryDB interface {
 }
 
 type Factory struct {
-	db FactoryDB
+	db DB
 }
 
 func (f *Factory) StartBackupJobFile(ctx context.Context, p taskdef.BackupJobPayload, db schedulerjob.JobDB) error {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Printf("panic in StartBackupJobFile: %v\nStack Trace:\n%s", r, debug.Stack())
+		}
+	}()
+
 	logger.Info("load job")
 	job, err := f.db.LoadJob(p.ID)
 
@@ -41,7 +53,16 @@ func (f *Factory) StartBackupJobFile(ctx context.Context, p taskdef.BackupJobPay
 
 	log.Info("load repo")
 	policy, err = f.db.LoadPolicy(job.PolicyID)
-	repo, err := f.db.LoadRepository(policy.RepositoryID)
+	if err != nil {
+		return err
+	}
+
+	repo, err := repository.LoadRepo(f.db, policy.RepositoryID)
+	if err != nil {
+		return err
+	}
+
+	bset, err := repo.AddBackupset(job.ID, job.BackupType)
 
 	if err != nil {
 		return err
@@ -56,7 +77,7 @@ func (f *Factory) StartBackupJobFile(ctx context.Context, p taskdef.BackupJobPay
 
 	log.Info("start to run job")
 	filejob := fjob.NewFileBackupSchedulerJob(job, log)
-	filejob.Run(ctx, db, policy, repo, agent)
+	filejob.Run(ctx, db, policy, repo, agent, bset)
 
 	return nil
 }

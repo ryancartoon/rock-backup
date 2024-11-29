@@ -14,9 +14,10 @@ import (
 
 var logger = log.New("worker-tasks.log")
 
-func MakeHandleBackupFileTask(config *viper.Viper, db FactoryDB, jobDB schedulerjob.JobDB) func(ctx context.Context, t *asynq.Task) error {
+func MakeHandleBackupFileTask(config *viper.Viper, db DB, jobDB schedulerjob.JobDB) func(ctx context.Context, t *asynq.Task) error {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p taskdef.BackupJobPayload
+
 		if err := json.Unmarshal(t.Payload(), &p); err != nil {
 			return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 		}
@@ -24,6 +25,7 @@ func MakeHandleBackupFileTask(config *viper.Viper, db FactoryDB, jobDB scheduler
 		logger.Infof("job input: %v", p)
 		factory := &Factory{db}
 		factory.StartBackupJobFile(ctx, p, jobDB)
+
 		return nil
 	}
 }

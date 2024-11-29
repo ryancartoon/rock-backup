@@ -264,38 +264,37 @@ func GenStartBackupJobHandler(s service.BackupServiceI) func(*gin.Context) {
 	}
 }
 
-//	func GenOpenDBServiceHandler(s service.BackupServiceI) func(*gin.Context) {
-//		return func(c *gin.Context) {
-//			r, err := decodeServoceOpenReuqest(c)
+// func GenStartRestoreJobHandler(s service.BackupServiceI) func(*gin.Context) {
+// 	return func(c *gin.Context) {
+// 		logger.Info("request is received.")
 //
-//			sourceType := "file"
-//			name := sourceType + r.SourcePath
-//			source := &service.BackupSource{
-//				SourceType: sourceType,
-//				SourcePath: r.SourcePath,
-//				SourceName: name,
-//			}
+// 		r, err := decocdeStartRestoreJobRequest(c)
+// 		logger.Infof("%v\n", r)
+// 		if err != nil {
+// 			c.JSON(http.StatusOK, gin.H{"error": err})
+// 			return
+// 		}
 //
-//			startTime, err := convStrToTime(r.StartTime)
-//			if err != nil {
-//				c.JSON(http.StatusOK, gin.H{})
-//			}
+// 		logger.Info("request of restore is decoded.")
 //
-//			full := schedules.Schedule{Cron: r.FullBackupSchedule, StartTime: startTime}
-//			incr := schedules.Schedule{Cron: r.IncrBackupSchedule, StartTime: startTime}
-//			log := schedules.Schedule{Cron: r.LogBackupSchedule, StartTime: startTime}
+// 		policyID, err := strconv.ParseUint(r.PolicyID, 10, 0)
+// 		if err != nil {
+// 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+// 			return
+// 		}
 //
-//			var policy *service.Policy
+// 		err = s.StartBackupJob(uint(policyID), r.BackupType)
 //
-//			err = s.OpenDB(source, policy, []schedules.Schedule{full, incr, log})
+// 		if err != nil {
+// 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+// 			return
+// 		}
 //
-//			if err != nil {
-//				c.JSON(http.StatusOK, gin.H{})
-//			}
+// 		c.JSON(http.StatusOK, nil)
 //
-//			c.JSON(http.StatusOK, gin.H{})
-//		}
-//	}
+// 	}
+// }
+
 func GenCloseServiceHandler(s service.BackupServiceI) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// s.Close()

@@ -14,6 +14,7 @@ import (
 	"rockbackup/backend/policy"
 	"rockbackup/backend/schedulerjob"
 	"rockbackup/backend/schedules"
+	"rockbackup/backend/backupset"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -31,6 +32,7 @@ func (d *DB) AutoMigrate() error {
 		&schedules.Schedule{},
 		&host.Host{},
 		&schedulerjob.Job{},
+		&backupset.Backupset{},
 	); err != nil {
 		return err
 	}
