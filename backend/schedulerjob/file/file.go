@@ -1,64 +1,41 @@
 package filejob
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"rockbackup/backend/agentd"
 	"rockbackup/backend/backupset"
 	"rockbackup/backend/log"
 	"rockbackup/backend/policy"
 	"rockbackup/backend/repository"
+	"rockbackup/backend/restic"
 	"rockbackup/backend/schedulerjob"
 )
 
 var logger = log.New("agent.log")
 
-var (
-	ResticBackupFatalError  = errors.New("restic fatal error - no snapshot created")
-	ResticBackupSourceError = errors.New("source data could not be read")
-)
-
-type Restic struct {
-	Name       string
-	Envs       []string
-	GlobalArgs []string
-}
-
-// {"message_type":"summary","files_new":0,"files_changed":0,"files_unmodified":3,"dirs_new":0,"dirs_changed":0,
-// "dirs_unmodified":3,"data_blobs":0,"tree_blobs":0,"data_added":0,"total_files_processed":3,
-// "total_bytes_processed":11601,"total_duration":0.20655076,"snapshot_id":"6c2b23ec"}
-type ResticBackupResponse struct {
-	SnapshotID          string  `json:"snapshot_id"`
-	DataAdded           int     `json:"data_added"`
-	TotalFileProcessed  int     `json:"total_file_processed"`
-	TotalBytesProcessed int     `json:"total_bytes_processed"`
-	TotolDuration       float32 `json:"totol_duration"` // TODO check restic total duration data type
-}
-
 func NewFileBackupSchedulerJob(job *schedulerjob.Job, log *log.Logger) *FileBackupSchedulerJob {
 	envs := []string{"RESTIC_PASSWORD=redhat"}
 	args := []string{"--json"}
-	restic := Restic{"/usr/bin/restic", envs, args}
+	restic := restic.Restic{Name: "/usr/bin/restic", Envs: envs, GlobalArgs: args}
 
 	return &FileBackupSchedulerJob{*job, restic, log}
 }
 
 type FileBackupSchedulerJob struct {
 	schedulerjob.Job
-	Restic Restic
+	Restic restic.Restic
 	logger *log.Logger
 }
 
-func (j *FileBackupSchedulerJob) Run(
-	ctx context.Context,
-	db schedulerjob.JobDB,
-	policy *policy.Policy,
-	repo *repository.Repository,
-	agent *agentd.Agent,
-	bset *backupset.Backupset,
-) error {
+// func (j *FileBackupSchedulerJob) SaveBackupResult(id uint, bsetID uint, snapID string, Size int64, FileNum int64) error {
+// 	return j.db.SaveBackupResult(id, bsetID, snapID, Size, FileNum)
+// }
+//
+// func (j *FileBackupSchedulerJob ) SaveBackupError(id uint, err string) {
+// 	return j.db.SaveBackupError(id, err
+// }
+
+func (j *FileBackupSchedulerJob) Run(ctx context.Context, db schedulerjob.JobDB, policy *policy.Policy, repo *repository.Repository, agent *agentd.Agent, bset *backupset.Backupset) error {
 	var err error
 
 	if j.BackupType == "Full" {
@@ -90,62 +67,29 @@ func (j *FileBackupSchedulerJob) Run(
 	return nil
 }
 
-func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *repository.Repository) error {
-	args := []string{"init", "--repo", repo.MountPoint}
-	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
+func NewFileRestoreSchedulerJob(job *schedulerjob.Job, log *log.Logger) *FileBackupSchedulerJob {
+	envs := []string{"RESTIC_PASSWORD=redhat"}
+	args := []string{"--json"}
+	restic := restic.Restic{Name: "/usr/bin/restic", Envs: envs, GlobalArgs: args}
+
+	return &FileBackupSchedulerJob{*job, restic, log}
+}
+
+type FileRestoreSchedulerJob struct {
+	schedulerjob.Job
+	Restic restic.Restic
+	logger *log.Logger
+}
+
+func (j *FileRestoreSchedulerJob) Run(ctx context.Context, db schedulerjob.JobDB, repo *repository.Repository, agent *agentd.Agent, bset *backupset.Backupset, target string) error {
+
+	logger.Info("start to run restic restore")
+	err := j.Restic.Restore(ctx, agent, repo, bset, target)
 
 	if err != nil {
+		db.SaveBackupError(j.ID, err.Error())
 		return err
 	}
 
-	if rc != 0 {
-		return errors.New(string(stdout))
-	}
-
 	return nil
-}
-
-func (r *Restic) Backup(
-	ctx context.Context,
-	sourcePath string,
-	agent *agentd.Agent,
-	repo *repository.Repository,
-) (string, int64, int64, error) {
-	args := []string{"backup", sourcePath, "--repo", repo.MountPoint}
-	args = append(args, r.GlobalArgs...)
-
-	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
-
-	if err != nil {
-		return "", 0, 0, err
-	}
-
-	if rc == 1 {
-		return "", 0, 0, ResticBackupFatalError
-	}
-
-	if rc == 3 {
-		return "", 0, 0, ResticBackupSourceError
-	}
-
-	if rc != 0 {
-		return "", 0, 0, errors.New(string(stdout))
-	}
-
-	lines := bytes.Split(stdout, []byte("\n"))
-	summary := lines[len(lines)-2]
-
-	resp := &ResticBackupResponse{}
-	err = json.Unmarshal(summary, resp)
-
-	if err != nil {
-		return "", 0, 0, err
-	}
-
-	return resp.SnapshotID, int64(resp.TotalBytesProcessed), int64(resp.TotalFileProcessed), nil
-}
-
-func RunCmdAgent(agent agentd.Agent, cmd string, env map[string]string) ([]byte, error) {
-	var out []byte
-	return out, nil
 }
