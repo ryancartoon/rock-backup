@@ -1,6 +1,7 @@
 package logbackup
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -22,6 +23,7 @@ func init() {
 type DB interface {
 	AddFileMeta(FileMeta FileMeta) error
 	UpdateLastUpdateTime(t time.Time) error
+	GetLastUpdateTime() (time.Time, error)
 }
 
 type FileMeta struct {
@@ -35,30 +37,46 @@ type FileMeta struct {
 	UpdateAt  time.Time
 }
 
-func NewWatcher() *LogWatcher {
+func calculateSHA256(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+func NewLogWatcher(db DB) *LogWatcher {
 	fsWatcher, err := fsnotify.NewWatcher()
 
 	if err != nil {
 		panic("Failed to create watcher")
 	}
 
-	filemetaCh := make(chan FileMeta)
+	newFileMetaCh := make(chan FileMeta)
 
 	return &LogWatcher{
-		watcher:    fsWatcher,
-		fileMetaCh: filemetaCh,
-		stoppingCh: make(chan struct{}),
-		addPathCh:  make(chan string),
+		db:            db,
+		watcher:       fsWatcher,
+		newFileMetaCh: newFileMetaCh,
+		stoppingCh:    make(chan struct{}),
+		addPathCh:     make(chan string),
 	}
 }
 
 type LogWatcher struct {
-	watcher      *fsnotify.Watcher
-	fileMetaCh   chan FileMeta
-	stoppingCh   chan struct{}
-	addPathCh    chan string
-	removePathCh chan string
-	db           DB
+	watcher       *fsnotify.Watcher
+	newFileMetaCh chan FileMeta
+	stoppingCh    chan struct{}
+	addPathCh     chan string
+	removePathCh  chan string
+	db            DB
 }
 
 func (w *LogWatcher) AddPath(path string) error {
@@ -118,8 +136,8 @@ func (w *LogWatcher) beforeWatch(paths []string) error {
 	return nil
 }
 
-func (w *LogWatcher) Watch() error {
-	err := w.beforeWatch()
+func (w *LogWatcher) Watch(ctx context.Context) error {
+	err := w.beforeWatch([]string{})
 
 	if err != nil {
 		return err
@@ -159,11 +177,11 @@ RunningLoop:
 						SHA256:  sha256Sum,
 					}
 
-					w.fileMetaCh <- fm
+					w.newFileMetaCh <- fm
 
 				}
 			}
-		case fm := <-w.fileMetaCh:
+		case fm := <-w.newFileMetaCh:
 			if err := w.AddNewFile(fm); err != nil {
 				logger.Errorf("%v", err)
 			}
@@ -174,15 +192,22 @@ RunningLoop:
 		case <-time.After(5 * time.Second):
 			logger.Info("heart beat")
 
-		case err, _ := <-w.watcher.Errors:
-			logger.Printf("Watcher error: %v", err)
+		case err, ok := <-w.watcher.Errors:
+			if !ok {
+				logger.Error("watcher closed")
+			}
+			logger.Errorf("error: %s", err)
 		case <-w.stoppingCh:
+			w.watcher.Close()
 			break RunningLoop
+		case <-ctx.Done():
+			w.watcher.Close()
+			break RunningLoop
+
 		}
 	}
 
 	return nil
-
 }
 
 func (w *LogWatcher) AddNewFile(file FileMeta) error {
