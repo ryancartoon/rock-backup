@@ -58,6 +58,7 @@ type BackupServiceI interface {
 	OpenFile(PolicyRequest) error
 	GetPolicies() ([]PolicyView, error)
 	StartBackupJob(policyID uint, backupType string) error
+	StartRestoreJob(policyID uint, backupsetID uint, targetPath string) error
 	// OpenDB(src *BackupSource, policy *Policy, schs []schedules.Schedule) error Close(srcID uint) error }
 }
 
@@ -174,5 +175,11 @@ func (s *BackupService) GetPolicies() ([]PolicyView, error) {
 func (s *BackupService) StartBackupJob(policyID uint, backupType string) error {
 	operator := "api"
 	s.scheduler.AddSchedulerJobBackup(policyID, backupType, operator)
+	return nil
+}
+
+func (s *BackupService) StartRestoreJob(policyID uint, backupsetID uint, targetPath string) error {
+	operator := "api"
+	s.scheduler.AddSchedulerJobRestore(policyID, backupsetID, targetPath, operator)
 	return nil
 }

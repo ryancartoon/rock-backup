@@ -203,3 +203,35 @@ func (s *Scheduler) AddSchedulerJobBackup(policyID uint, backupType string, oper
 
 	return nil
 }
+
+func (s *Scheduler) AddSchedulerJobRestore(policyID uint, backupsetID uint, targetPath string, operator string) error {
+	var job schedulerjob.Job
+	var jobType string
+
+	policy, err := s.db.GetPolicy(policyID)
+
+	backupset, err := s.db.GetBackupset(backupsetID)
+
+	if err != nil {
+		return err
+	}
+
+	if policy.BackupSource.SourceType == "file" {
+		jobType = schedulerjob.JobTypeBackupFile
+	}
+
+	job = schedulerjob.Job{
+		PolicyID:     policy.ID,
+		JobType:      jobType,
+		Operator:     operator,
+		Hostname:     policy.Hostname,
+		Priority:     5,
+		InSchedule:   true,
+		RepositoryID: backupset.RepositoryID,
+		Status:       schedulerjob.SchedulerJobStatusCreated,
+	}
+
+	s.newJobCh <- job
+
+	return nil
+}

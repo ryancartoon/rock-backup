@@ -3,8 +3,9 @@ package policy
 import (
 	"time"
 
-	"gorm.io/gorm"
 	"rockbackup/backend/repository"
+
+	"gorm.io/gorm"
 	// "rockbackup/backend/schedules"
 )
 
@@ -19,11 +20,11 @@ const (
 type BackupSource struct {
 	gorm.Model
 	ID           uint       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	SourceType   string     `json:"source_type" gorm:"column:source_type"`
-	SourceName   string     `json:"source_name" gorm:"column:source_name"`
-	SourcePath   string     `json:"source_path" gorm:"column:source_path"`
-	SourceHostID uint       `json:"source_host_id" gorm:"column:source_host_id"`
-	LastScanTime *time.Time `json:"last_scan_time" gorm:"column:last_scan_time"`
+	SourceType   string     `gorm:"column:source_type"                 json:"source_type"`
+	SourceName   string     `gorm:"column:source_name"                 json:"source_name"`
+	SourcePath   string     `gorm:"column:source_path"                 json:"source_path"`
+	SourceHostID uint       `gorm:"column:source_host_id"              json:"source_host_id"`
+	LastScanTime *time.Time `gorm:"column:last_scan_time"              json:"last_scan_time"`
 }
 
 // Policy backup policy
@@ -39,4 +40,11 @@ type Policy struct {
 	Repository     *repository.Repository `gorm:"column:repository"`
 	ScheduleDesc   string                 `gorm:"column:schedule_desc"`
 	// BackupCycle  uint
+}
+
+type Instance struct {
+	Name      string
+	DataPath  string
+	LoginPath string
+	ConfPath  string
 }

@@ -29,10 +29,14 @@ var jobAddCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		jobType, _ := cmd.Flags().GetString("type")
 		backupType, _ := cmd.Flags().GetString("backup_type")
-		policy_id, _ := cmd.Flags().GetString("policy_id")
+		policyID, _ := cmd.Flags().GetString("policy_id")
+		backupsetID, _ := cmd.Flags().GetString("bset_id")
+		targetPath, _ := cmd.Flags().GetString("target_path")
 
 		if jobType == "backup" {
-			app.StartBackup(policy_id, backupType)
+			app.StartBackup(policyID, backupType)
+		} else if jobType == "restore" {
+			app.StartRestore(policyID, backupsetID, targetPath)
 		}
 	},
 }
@@ -57,6 +61,8 @@ func main() {
 	jobAddCmd.Flags().StringP("type", "t", "", "Type of the job (e.g., backup)")
 	jobAddCmd.Flags().StringP("backup_type", "b", "full", "Data type of the job (e.g., full, incremental)")
 	jobAddCmd.Flags().StringP("policy_id", "p", "0", "id of policy")
+	jobAddCmd.Flags().StringP("bset_id", "s", "0", "id of backupset")
+	jobAddCmd.Flags().StringP("target_path", "t", "0", "target path files are restored to")
 
 	if err := cmdRoot.Execute(); err != nil {
 		panic(err)
@@ -64,7 +70,6 @@ func main() {
 }
 
 func (a *App) StartBackup(policyID, backupType string) {
-	// url := "backup/job"
 
 	baseURL, err := url.Parse(a.Host)
 
@@ -100,4 +105,44 @@ func (a *App) StartBackup(policyID, backupType string) {
 	}
 
 	fmt.Printf("%v\n", resp)
+}
+
+func (a *App) StartRestore(policyID string, backupsetID uint, targetPath string) error {
+
+	baseURL, err := url.Parse(a.Host)
+
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return err
+	}
+
+	baseURL.Path += "/restore/job"
+
+	httpClient := &http.Client{}
+
+	data := map[string]interface{}{"policy_id": policyID, "backupset_id": backupsetID, "target_path": targetPath}
+
+	fmt.Printf("%v\n\n", data)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return err
+	}
+
+	req, err := http.NewRequest("POST", baseURL.String(), bytes.NewBuffer(jsonData))
+
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return err
+	}
+
+	resp, err := httpClient.Do(req)
+
+	if err != nil {
+		fmt.Println("http client error:", err)
+		return err
+	}
+
+	fmt.Printf("%v\n", resp)
+	return nil
 }

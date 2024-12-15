@@ -43,6 +43,12 @@ type StartBackupJobRequest struct {
 	BackupType string `json:"backup_type"`
 }
 
+type StartFileRestoreJobRequest struct {
+	PolicyID    uint   `json:"policy_id"`
+	BackupsetID uint   `json:"backupset_id"`
+	TargetPath  string `json:"target_path"`
+}
+
 var (
 	NilTime = datatypes.NewTime(0, 0, 0, 0)
 )
@@ -100,8 +106,10 @@ func (a *WebAPI) NewRouter() *gin.Engine {
 		)
 	}))
 	r.POST("/service/file/open", GenOpenFileServiceHandler(a.ServiceEntry))
+	r.POST("/service/mysql/open", GenOpenFileServiceHandler(a.ServiceEntry))
 	r.GET("/service/file/get", GenGetPolicyHandler(a.ServiceEntry))
-	r.POST("/backup/job", GenStartBackupJobHandler(a.ServiceEntry))
+	r.POST("/backup/job", GenStartFileBackupJobHandler(a.ServiceEntry))
+	r.POST("/restore/job", GenStartFileRestoreJobHandler(a.ServiceEntry))
 	// r.POST("/service/db/open", GenOpenDBServiceHandler(a.ServicEntry))
 
 	return r
@@ -145,6 +153,16 @@ func decocdeStartBackupJobRequest(c *gin.Context) (StartBackupJobRequest, error)
 
 	if err := c.BindJSON(&r); err != nil {
 		return StartBackupJobRequest{}, err
+	}
+
+	return r, nil
+}
+
+func decocdeStartFileRestoreJobRequest(c *gin.Context) (StartFileRestoreJobRequest, error) {
+	var r StartFileRestoreJobRequest
+
+	if err := c.BindJSON(&r); err != nil {
+		return StartFileRestoreJobRequest{}, err
 	}
 
 	return r, nil
@@ -233,7 +251,7 @@ func GenGetPolicyHandler(s service.BackupServiceI) func(*gin.Context) {
 	}
 }
 
-func GenStartBackupJobHandler(s service.BackupServiceI) func(*gin.Context) {
+func GenStartFileBackupJobHandler(s service.BackupServiceI) func(*gin.Context) {
 	return func(c *gin.Context) {
 		logger.Info("request is received.")
 
@@ -253,6 +271,31 @@ func GenStartBackupJobHandler(s service.BackupServiceI) func(*gin.Context) {
 		}
 
 		err = s.StartBackupJob(uint(policyID), r.BackupType)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+
+		c.JSON(http.StatusOK, nil)
+
+	}
+}
+
+func GenStartFileRestoreJobHandler(s service.BackupServiceI) func(*gin.Context) {
+	return func(c *gin.Context) {
+		logger.Info("request is received.")
+
+		r, err := decocdeStartFileRestoreJobRequest(c)
+		logger.Infof("%v\n", r)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"error": err})
+			return
+		}
+
+		logger.Info("request is decoded.")
+
+		err = s.StartRestoreJob(r.PolicyID, r.BackupsetID, r.TargetPath)
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})

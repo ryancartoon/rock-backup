@@ -53,3 +53,21 @@ func (db *DB) StartJob(id uint) error {
 
 	return nil
 }
+
+func (db *DB) GetBackupset() (jobs []scheduler.JobInSchedule, err error) {
+	var sjobs []schedulerjob.Job
+
+	result := db.g.Model(&sjobs).Where(
+		"in_schedule = ?", true,
+	).Find(&sjobs)
+
+	if result.Error != nil {
+		return nil, err
+	}
+
+	for _, job := range sjobs {
+		jobs = append(jobs, scheduler.JobInSchedule{Job: job})
+	}
+
+	return jobs, nil
+}

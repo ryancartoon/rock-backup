@@ -35,7 +35,14 @@ type FileBackupSchedulerJob struct {
 // 	return j.db.SaveBackupError(id, err
 // }
 
-func (j *FileBackupSchedulerJob) Run(ctx context.Context, db schedulerjob.JobDB, policy *policy.Policy, repo *repository.Repository, agent *agentd.Agent, bset *backupset.Backupset) error {
+func (j *FileBackupSchedulerJob) Run(
+	ctx context.Context,
+	db schedulerjob.JobDB,
+	policy *policy.Policy,
+	repo *repository.Repository,
+	agent *agentd.Agent,
+	bset *backupset.Backupset,
+) error {
 	var err error
 
 	if j.BackupType == "Full" {
@@ -81,7 +88,14 @@ type FileRestoreSchedulerJob struct {
 	logger *log.Logger
 }
 
-func (j *FileRestoreSchedulerJob) Run(ctx context.Context, db schedulerjob.JobDB, repo *repository.Repository, agent *agentd.Agent, bset *backupset.Backupset, target string) error {
+func (j *FileRestoreSchedulerJob) Run(
+	ctx context.Context,
+	db schedulerjob.JobDB,
+	repo *repository.Repository,
+	agent *agentd.Agent,
+	bset *backupset.Backupset,
+	target string,
+) error {
 
 	logger.Info("start to run restic restore")
 	err := j.Restic.Restore(ctx, agent, repo, bset, target)
