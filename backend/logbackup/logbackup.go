@@ -37,21 +37,6 @@ type FileMeta struct {
 	UpdateAt  time.Time
 }
 
-func calculateSHA256(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
-
 func NewLogWatcher(db DB) *LogWatcher {
 	fsWatcher, err := fsnotify.NewWatcher()
 
@@ -59,7 +44,7 @@ func NewLogWatcher(db DB) *LogWatcher {
 		panic("Failed to create watcher")
 	}
 
-	newFileMetaCh := make(chan FileMeta)
+	newFileMetaCh := make(chan FileMeta, 100)
 
 	return &LogWatcher{
 		db:            db,
@@ -122,7 +107,11 @@ func (w *LogWatcher) beforeWatch(paths []string) error {
 					SHA256:  sha256Sum,
 				}
 
-				w.db.AddFileMeta(file)
+				err = w.db.AddFileMeta(file)
+
+				if err != nil {
+					logger.Error(err)
+				}
 			}
 
 			return nil
@@ -187,7 +176,9 @@ RunningLoop:
 			}
 
 		case path := <-w.addPathCh:
-			w.AddPath(path)
+			if err := w.AddPath(path); err != nil {
+				logger.Errorf("%v", err)
+			}
 
 		case <-time.After(5 * time.Second):
 			logger.Info("heart beat")
@@ -203,7 +194,6 @@ RunningLoop:
 		case <-ctx.Done():
 			w.watcher.Close()
 			break RunningLoop
-
 		}
 	}
 

@@ -39,12 +39,14 @@ func TestWatcherWatch(t *testing.T) {
 	// Set up a test directory with some files.
 	testDir1 := t.TempDir()
 	testDir2 := t.TempDir()
-	createTestFiles(testDir1, []string{"1"})
-	createTestFiles(testDir2, []string{"1"})
+	err := createTestFiles(testDir1, []string{"1"})
+	assert.NoError(t, err)
+	err = createTestFiles(testDir2, []string{"1"})
+	assert.NoError(t, err)
 
 	db := &dbMock{}
 	watcher := NewLogWatcher(db)
-	err := watcher.AddPath(testDir1)
+	err = watcher.AddPath(testDir1)
 	assert.NoError(t, err)
 	err = watcher.AddPath(testDir2)
 	assert.NoError(t, err)
@@ -56,16 +58,31 @@ func TestWatcherWatch(t *testing.T) {
 	assert.Equal(t, len(db.fileMetas), 0) // Assuming two files were created initially.
 
 	createTestFiles(testDir1, []string{"2"})
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 1)
 	assert.Equal(t, len(db.fileMetas), 1)
 
-	// createTestFiles(testDir2, []string{"2"})
-	// time.Sleep(time.Second * 1)
-	// assert.Equal(t, len(db.fileMetas), 2)
+	assert.Equal(t, "2", db.fileMetas[0].Name)
+	assert.Equal(t, filepath.Join(testDir1, "2"), db.fileMetas[0].Path)
+	assert.Equal(t, string("6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72"), db.fileMetas[0].SHA256)
+
+	createTestFiles(testDir2, []string{"2"})
+	time.Sleep(time.Second * 1)
+	assert.Equal(t, len(db.fileMetas), 2)
+
+	assert.Equal(t, "2", db.fileMetas[0].Name)
+	assert.Equal(t, filepath.Join(testDir2, "2"), db.fileMetas[1].Path)
+	assert.Equal(t, string("6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72"), db.fileMetas[1].SHA256)
+
 }
 
-func createTestFiles(dir string, fileNames []string) {
+func createTestFiles(dir string, fileNames []string) error {
 	for _, fileName := range fileNames {
-		os.WriteFile(filepath.Join(dir, fileName), []byte("test content"), 0644)
+		err := os.WriteFile(filepath.Join(dir, fileName), []byte("test content"), 0644)
+
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
