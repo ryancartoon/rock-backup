@@ -1,7 +1,6 @@
 package logbackup
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -84,121 +83,121 @@ func (w *LogWatcher) RemovePath(path string) error {
 	return nil
 }
 
-func (w *LogWatcher) beforeWatch(paths []string) error {
+func (w *LogWatcher) Scasn(path string, t time.Time) ([]FileMeta, error) {
 	// scan paths
 
-	for _, path := range paths {
-		err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	var metas []FileMeta
+
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			sha256Sum, err := calSHA(path)
 			if err != nil {
-				return err
+				logger.Error(err)
 			}
 
-			if !info.IsDir() {
-				sha256Sum, err := calSHA(path)
-				if err != nil {
-					logger.Error(err)
-				}
-
-				file := FileMeta{
-					Name:    info.Name(),
-					Path:    path,
-					Size:    info.Size(),
-					ModTime: info.ModTime(),
-					SHA256:  sha256Sum,
-				}
-
-				err = w.db.AddFileMeta(file)
-
-				if err != nil {
-					logger.Error(err)
-				}
+			file := FileMeta{
+				Name:    info.Name(),
+				Path:    path,
+				Size:    info.Size(),
+				ModTime: info.ModTime(),
+				SHA256:  sha256Sum,
 			}
 
-			return nil
-		})
+			metas = append(metas, file)
+		}
 
 		if err != nil {
-			logger.Printf("Error walking folder %s: %v", path, err)
+			logger.Error(err)
 		}
-	}
 
-	return nil
-}
-
-func (w *LogWatcher) Watch(ctx context.Context) error {
-	err := w.beforeWatch([]string{})
+		return nil
+	})
 
 	if err != nil {
-		return err
+		logger.Printf("Error walking folder %s: %v", path, err)
 	}
 
-RunningLoop:
-	for {
-		select {
-		case event, ok := <-w.watcher.Events:
-			if !ok {
-				logger.Errorf("%v", event)
-				continue RunningLoop
-			}
-
-			if event.Op&fsnotify.Create == fsnotify.Create {
-				logger.Printf("New file detected: %s", event.Name)
-
-				info, err := os.Stat(event.Name)
-				if err != nil {
-					logger.Printf("Failed to stat file: %v", err)
-					continue
-				}
-
-				if !info.IsDir() {
-					sha256Sum, err := calSHA(event.Name)
-
-					if err != nil {
-						logger.Printf("Failed to compute SHA256 for file %s: %v", event.Name, err)
-						continue
-					}
-
-					fm := FileMeta{
-						Name:    info.Name(),
-						Path:    event.Name,
-						Size:    info.Size(),
-						ModTime: info.ModTime(),
-						SHA256:  sha256Sum,
-					}
-
-					w.newFileMetaCh <- fm
-
-				}
-			}
-		case fm := <-w.newFileMetaCh:
-			if err := w.AddNewFile(fm); err != nil {
-				logger.Errorf("%v", err)
-			}
-
-		case path := <-w.addPathCh:
-			if err := w.AddPath(path); err != nil {
-				logger.Errorf("%v", err)
-			}
-
-		case <-time.After(5 * time.Second):
-			logger.Info("heart beat")
-
-		case err, ok := <-w.watcher.Errors:
-			if !ok {
-				logger.Error("watcher closed")
-			}
-			logger.Errorf("error: %s", err)
-		case <-w.stoppingCh:
-			w.watcher.Close()
-			break RunningLoop
-		case <-ctx.Done():
-			w.watcher.Close()
-			break RunningLoop
-		}
-	}
-
-	return nil
+	return metas, nil
 }
+
+// func (w *LogWatcher) Watch(ctx context.Context) error {
+// 	err := w.beforeWatch([]string{})
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// RunningLoop:
+// 	for {
+// 		select {
+// 		case event, ok := <-w.watcher.Events:
+// 			if !ok {
+// 				logger.Errorf("%v", event)
+// 				continue RunningLoop
+// 			}
+
+// 			if event.Op&fsnotify.Create == fsnotify.Create {
+// 				logger.Printf("New file detected: %s", event.Name)
+
+// 				info, err := os.Stat(event.Name)
+// 				if err != nil {
+// 					logger.Printf("Failed to stat file: %v", err)
+// 					continue
+// 				}
+
+// 				if !info.IsDir() {
+// 					sha256Sum, err := calSHA(event.Name)
+
+// 					if err != nil {
+// 						logger.Printf("Failed to compute SHA256 for file %s: %v", event.Name, err)
+// 						continue
+// 					}
+
+// 					fm := FileMeta{
+// 						Name:    info.Name(),
+// 						Path:    event.Name,
+// 						Size:    info.Size(),
+// 						ModTime: info.ModTime(),
+// 						SHA256:  sha256Sum,
+// 					}
+
+// 					w.newFileMetaCh <- fm
+
+// 				}
+// 			}
+// 		case fm := <-w.newFileMetaCh:
+// 			if err := w.AddNewFile(fm); err != nil {
+// 				logger.Errorf("%v", err)
+// 			}
+
+// 		case path := <-w.addPathCh:
+// 			if err := w.AddPath(path); err != nil {
+// 				logger.Errorf("%v", err)
+// 			}
+
+// 		case <-time.After(5 * time.Second):
+// 			logger.Info("heart beat")
+
+// 		case err, ok := <-w.watcher.Errors:
+// 			if !ok {
+// 				logger.Error("watcher closed")
+// 			}
+// 			logger.Errorf("error: %s", err)
+// 		case <-w.stoppingCh:
+// 			w.watcher.Close()
+// 			break RunningLoop
+// 		case <-ctx.Done():
+// 			w.watcher.Close()
+// 			break RunningLoop
+// 		}
+// 	}
+
+// 	return nil
+// }
 
 func (w *LogWatcher) AddNewFile(file FileMeta) error {
 	return w.db.AddFileMeta(file)
