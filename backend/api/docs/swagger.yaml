@@ -1,0 +1,150 @@
+basePath: /
+definitions:
+  api.PolicyRequest:
+    properties:
+      album_name:
+        type: integer
+      backup_cycle:
+        type: integer
+      backup_source_id:
+        type: integer
+      backup_source_path:
+        type: string
+      full_backup_schedule:
+        type: string
+      hostname:
+        type: string
+      incr_backup_schedule:
+        type: string
+      repository_id:
+        type: integer
+      schedule_desc:
+        type: string
+      start_time:
+        type: string
+    required:
+    - album_name
+    - backup_cycle
+    - backup_source_id
+    - backup_source_path
+    - full_backup_schedule
+    - hostname
+    - incr_backup_schedule
+    - repository_id
+    - schedule_desc
+    - start_time
+    type: object
+  api.PolicyView:
+    properties:
+      backup_source_id:
+        type: integer
+      hostname:
+        type: string
+      id:
+        type: integer
+      repository_id:
+        type: integer
+      retention:
+        type: integer
+      source_host:
+        type: string
+      source_id:
+        type: integer
+      source_path:
+        type: string
+      source_type:
+        type: string
+      status:
+        type: string
+    type: object
+  api.Response:
+    properties:
+      result: {}
+    type: object
+  api.StartBackupJobRequest:
+    properties:
+      backup_type:
+        type: string
+      policy_id:
+        type: string
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a backup backend server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: RockBackup API
+  version: "1.0"
+paths:
+  /backup/job:
+    post:
+      consumes:
+      - application/json
+      description: start backup job
+      parameters:
+      - description: backup job params
+        in: body
+        name: policy
+        required: true
+        schema:
+          $ref: '#/definitions/api.StartBackupJobRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Start backup job
+      tags:
+      - BackupJob
+  /service/file/get:
+    get:
+      consumes:
+      - application/json
+      description: get backup policy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.PolicyView'
+      summary: Get backup policy
+      tags:
+      - Policy
+  /service/file/open:
+    post:
+      consumes:
+      - application/json
+      description: create backup policy
+      parameters:
+      - description: backup policy params
+        in: body
+        name: policy
+        required: true
+        schema:
+          $ref: '#/definitions/api.PolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.Response'
+      summary: Create backup policy
+      tags:
+      - Policy
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
