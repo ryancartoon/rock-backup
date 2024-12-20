@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"net/http"
 	"net/url"
+	"strconv"
+
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -35,8 +37,12 @@ var jobAddCmd = &cobra.Command{
 
 		if jobType == "backup" {
 			app.StartBackup(policyID, backupType)
-		} else if jobType == "restore" {
-			app.StartRestore(policyID, backupsetID, targetPath)
+			bsetID, err := strconv.ParseUint(backupsetID, 10, 64)
+			if err != nil {
+				fmt.Println("Invalid backupset ID:", err)
+				return
+			}
+			app.StartRestore(policyID, uint(bsetID), targetPath)
 		}
 	},
 }

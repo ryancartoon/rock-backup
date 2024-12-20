@@ -58,8 +58,8 @@ func (x *Xtrabackup) Restore(
 	targetPath string,
 
 ) error {
+	return nil
 }
-
 
 func (x *Xtrabackup) DeleteBackupset(bset backupset.Backupset) error {
 	return nil

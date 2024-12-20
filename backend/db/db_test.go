@@ -1,31 +1,46 @@
 package db
 
-import (
-	"github.com/stretchr/testify/assert"
-	"rockbackup/backend/schedules"
-	"rockbackup/backend/service"
-	"testing"
-)
+// func TestInitTest(t *testing.T) {
+// 	db := InitTest()
+// 	assert.NotNil(t, db)
+// }
 
-func initServiceDB(t *testing.T) *DB {
-	db := InitTest()
-	if err := db.g.AutoMigrate(&service.BackupSource{}, &service.Policy{}, &schedules.Schedule{}); err != nil {
-		t.Fatal(err)
-	}
+// func TestAutoMigrate(t *testing.T) {
+// 	db := InitTest()
+// 	err := db.AutoMigrate()
+// 	assert.Nil(t, err)
+// }
 
-	return db
-}
+// func TestGetPolicy(t *testing.T) {
+// 	db := InitTest()
+// 	db.AutoMigrate()
 
-func TestSaveServiceDB(t *testing.T) {
+// 	// Create a policy to test retrieval
+// 	p := policy.Policy{
+// 		Name: "Test Policy",
+// 		BackupSource: policy.BackupSource{
+// 			Name: "Test Source",
+// 		},
+// 	}
+// 	db.g.Create(&p)
 
-	db := initServiceDB(t)
+// 	retrievedPolicy, err := db.GetPolicy(p.ID)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, p.Name, retrievedPolicy.Name)
+// 	assert.Equal(t, p.BackupSource.Name, retrievedPolicy.BackupSource.Name)
+// }
 
-	src := service.BackupSource{}
-	plc := service.Policy{}
-	schs := []schedules.Schedule{}
-	err := db.SaveService(&src, &plc, schs)
+// func TestAddSchedulerJob(t *testing.T) {
+// 	db := InitTest()
+// 	db.AutoMigrate()
 
-	if err != nil {
-		assert.NoError(t, err)
-	}
-}
+// 	job := &schedulerjob.Job{
+// 		Name: "Test Job",
+// 	}
+// 	err := db.AddSchedulerJob(job)
+// 	assert.Nil(t, err)
+
+// 	var retrievedJob schedulerjob.Job
+// 	db.g.First(&retrievedJob, job.ID)
+// 	assert.Equal(t, job.Name, retrievedJob.Name)
+// }

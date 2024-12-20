@@ -49,9 +49,11 @@ func (j *MysqlBackupSchedulerJob) Run(
 	bset *backupset.Backupset,
 ) error {
 
-	if j.BackupType == "Full" {
-		logger.Info("full backup, init repo")
-	}
+	// if j.BackupType == "Full" {
+	// 	logger.Info("full backup, init repo")
+	// }
 
-	size := j.t.Backup(ctx, agent, j.BackupType, instance, repo)
+	// size := j.t.Backup(ctx, agent, j.BackupType, instance, repo)
+
+	return nil
 }

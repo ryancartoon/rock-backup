@@ -13,7 +13,7 @@ type RedisQueue struct {
 	Ctx    context.Context
 }
 
-func NewRedisQueue(rdb *RedisOptions, queue string) *RedisQueue {
+func NewRedisQueue(rdb *redis.Client, queue string) *RedisQueue {
 	return &RedisQueue{
 		Client: rdb,
 		Queue:  queue,

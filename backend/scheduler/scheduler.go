@@ -31,6 +31,7 @@ type DB interface {
 	GetPolicy(uint) (policy.Policy, error)
 	GetJobsInschedule() ([]JobInSchedule, error)
 	StartJob(id uint) error
+	GetBackupset(uint) (backupset.Backupset, error)
 }
 
 type JobHandler interface {
