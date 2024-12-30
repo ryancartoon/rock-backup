@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+option go_package = "rockbackup/proto";
+
+package proto;
+
+import "google/protobuf/timestamp.proto";
+
+
+service Agent {
+  rpc RunCmd (RunCmdRequest) returns (RunCmdReply) {}
+  rpc Scan (ScanRequest) returns (ScanReply) {}
+}
+
+message RunCmdRequest {
+  string name = 1;
+  repeated string args = 2;
+  repeated string envs = 3;
+}
+
+message RunCmdReply {
+    int32 return_code = 1;
+    bytes stdout = 2;
+    bytes stderr = 3;
+}
+
+message ScanRequest {
+  string path = 1;
+  google.protobuf.Timestamp start_time = 2;
+}
+
+message ScanReply {
+  repeated FileMeta file_metas = 1;
+}
+
+message FileMeta {
+  string path = 1;
+  string name = 2;
+  int64 size = 3;
+  string mode = 4;
+  string owner = 5;
+  string group = 6;
+  string mtime = 7;
+  string atime = 8;
+  string ctime = 9;
+  string sha256 = 10;
+}

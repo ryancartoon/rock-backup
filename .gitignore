@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+*.log
 
 # Test binary, built with `go test -c`
 *.test
@@ -19,3 +20,15 @@
 
 # Go workspace file
 go.work
+
+test.db
+
+venv/*
+.local/*
+.vscode/*
+logs/*
+tags
+*.log
+__pycache__/*
+.web/*
+*.db
