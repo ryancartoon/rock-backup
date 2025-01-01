@@ -2,7 +2,6 @@ package async
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
 	"rockbackup/backend/agentd"
 	"rockbackup/backend/async/taskdef"
 	"rockbackup/backend/policy"
@@ -10,6 +9,8 @@ import (
 	"rockbackup/backend/schedulerjob"
 	fjob "rockbackup/backend/schedulerjob/file"
 	"runtime/debug"
+
+	"github.com/sirupsen/logrus"
 )
 
 type DB interface {
@@ -84,8 +85,9 @@ func (f *Factory) StartBackupJobFile(ctx context.Context, p taskdef.BackupJobPay
 
 func (f *Factory) LoadRepo(id uint) (*repository.Repository, error) {
 	var repo *repository.Repository
-	repo, err := f.db.LoadRepository(id)
+	backend, err := f.db.LoadBackend(id)
 
+	NewRepo(backend)
 	if err != nil {
 		return nil, err
 	}
