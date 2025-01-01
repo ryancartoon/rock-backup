@@ -1,8 +1,9 @@
 package backupset
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type Backupset struct {
@@ -17,4 +18,6 @@ type Backupset struct {
 	BackupTime          *time.Time `gorm:"column:backup_time"`
 	RepositoryID        uint       `gorm:"column:repository_id"`
 	JobID               uint       `gorm:"column:job_id"`
+	RepoName            string     `gorm:"column:repo_name"`
+	BackupCycle         string     `gorm:"column:backup_cycle"`
 }

@@ -90,7 +90,7 @@ func (w *LogWatcher) scanPolicy(ctx context.Context, p policy.Policy) (metas []d
 		logger.Errorf("get last update time error: %v", err)
 		return nil, err
 	}
-	path := genLogPath(p.Repository.MountPoint, p.BackupSource.SourceName)
+	path := genLogPath(p.Repository.Backend.Path, p.BackupSource.SourceName)
 	metas, err = agent.Scan(ctx, path, startTime)
 
 	if err != nil {

@@ -8,13 +8,12 @@ import (
 	"fmt"
 	"time"
 
-	// "rockbackup/backend"
-	// "github.com/spf13/viper"
+	"rockbackup/backend/backupset"
 	"rockbackup/backend/host"
 	"rockbackup/backend/policy"
+	"rockbackup/backend/repository"
 	"rockbackup/backend/schedulerjob"
 	"rockbackup/backend/schedules"
-	"rockbackup/backend/backupset"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -33,6 +32,8 @@ func (d *DB) AutoMigrate() error {
 		&host.Host{},
 		&schedulerjob.Job{},
 		&backupset.Backupset{},
+		&repository.Backend{},
+		&repository.Repository{},
 	); err != nil {
 		return err
 	}

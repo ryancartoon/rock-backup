@@ -3,17 +3,14 @@ package policy
 import (
 	"time"
 
-	"rockbackup/backend/repository"
-
 	"gorm.io/gorm"
-	// "rockbackup/backend/schedules"
 )
 
 const (
 	ServiceStatusServing = "serving"
 
-	BackupSourceTypeMySQL = "mysql"
-	BackupSourceTypeFile  = "file"
+	BackupSourceTypeMySQL      = "mysql"
+	BackupSourceTypeFileRestic = "file-restic"
 )
 
 // BackupSource source of backup
@@ -30,16 +27,19 @@ type BackupSource struct {
 // Policy backup policy
 type Policy struct {
 	gorm.Model
-	ID             uint                   `gorm:"column:id;primaryKey;autoIncrement"`
-	Retention      uint                   `gorm:"column:retention"`
-	BackupSourceID uint                   `gorm:"column:backup_source_id"`
-	BackupSource   *BackupSource          `gorm:"column:backup_source"`
-	Hostname       string                 `gorm:"column:hostname"`
-	LogHostname    string                 `gorm:"column:log_hostname"`
-	Status         string                 `gorm:"column:status"`
-	RepositoryID   uint                   `gorm:"column:repository_id"`
-	ScheduleDesc   string                 `gorm:"column:schedule_desc"`
-	Repository     *repository.Repository `gorm:"-"`
+	ID                     uint          `gorm:"column:id;primaryKey;autoIncrement"`
+	Retention              uint          `gorm:"column:retention"`
+	BackupSourceID         uint          `gorm:"column:backup_source_id"`
+	BackupSource           *BackupSource `gorm:"column:backup_source"`
+	Hostname               string        `gorm:"column:hostname"`
+	LogHostname            string        `gorm:"column:log_hostname"`
+	Status                 string        `gorm:"column:status"`
+	ScheduleDesc           string        `gorm:"column:schedule_desc"`
+	RepoName               string        `gorm:"column:repo_name"`
+	CurrentBackupCycleName string        `gorm:"column:current_backup_cycle_name"`
+	// RepsoitoryID           uint                   `gorm:"column:repository_id"`
+	// Repository             *repository.Repository `gorm:"-"`
+	// BackendID              uint                   `gorm:"column:backend_id"`
 	// BackupCycle  uint
 }
 

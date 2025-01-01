@@ -26,6 +26,7 @@ var logger = log.New("api.log")
 
 type OpenServiceRequest struct {
 	SourcePath         string `json:"source_path"`
+	SourceName         string `json:"source_name"`
 	Hostname           string `json:"hostname"`
 	BackupPlan         uint   `json:"backup_plan"`
 	Retention          uint   `json:"retention"`
@@ -33,7 +34,7 @@ type OpenServiceRequest struct {
 	IncrBackupSchedule string `json:"incr_backup_schedule"`
 	LogBackupSchedule  string `json:"log_backup_schedule"` // hours
 	StartTime          string `json:"start_time"`
-	RepositoryID       uint   `json:"repository_id"`
+	BackendID          uint   `json:"backend_id"`
 	Duration           uint   `json:"duration"`
 	BackupCycle        uint   `json:"backup_cycle"`
 }
@@ -127,12 +128,12 @@ type Response struct {
 	Result interface{}
 }
 
-func verifyOpenServiceRequst(r *OpenServiceRequest) *BadRequestErr {
-	if r.BackupPlan == 0 {
-		return &BadRequestErr{fmt.Sprintf("backup plan %d", r.BackupPlan)}
-	}
-	return nil
-}
+// func verifyOpenServiceRequst(r *OpenServiceRequest) *BadRequestErr {
+// 	if r.BackupPlan == 0 {
+// 		return &BadRequestErr{fmt.Sprintf("backup plan %d", r.BackupPlan)}
+// 	}
+// 	return nil
+// }
 
 func decodeServoceOpenReuqest(c *gin.Context) (OpenServiceRequest, error) {
 	var request OpenServiceRequest
@@ -206,8 +207,9 @@ func GenOpenFileServiceHandler(s service.BackupServiceI) func(*gin.Context) {
 
 		policyReq.BackupSourcePath = r.SourcePath
 		policyReq.Hostname = r.Hostname
+		policyReq.BackupSourceName = r.SourceName
 		policyReq.Retention = r.Retention
-		policyReq.RepositoryID = r.RepositoryID
+		policyReq.BackendID = r.BackendID
 		policyReq.BackupCycle = r.BackupCycle
 
 		//TODO:  verify schedules

@@ -28,7 +28,7 @@ type PolicyView struct {
 	BackupSourceID uint   `json:"backup_source_id"`
 	Hostname       string `json:"hostname"`
 	Status         string `json:"status"`
-	RepositoryID   uint   `json:"repository_id"`
+	BackendID      uint   `json:"backend_id"`
 	// ScheduleDesc   string `json:"schedule_desc"`
 	// todo
 	// FullDay uint `json:"full_day"`
@@ -37,16 +37,17 @@ type PolicyView struct {
 }
 
 type PolicyRequest struct {
-	Retention          uint
-	BackupSourcePath   string
-	Hostname           string
-	RepositoryID       uint
-	BackupSourceID     uint
-	FullBackupSchedule string
-	IncrBackupSchedule string
-	ScheduleDesc       string
-	StartTime          datatypes.Time
-	BackupCycle        uint
+	Retention          uint `json:"retention"`
+	BackupSourcePath   string `json:"source_path"`
+	Hostname           string `json:"hostname"`
+	BackendID          uint `json:"backend_id"`
+	BackupSourceID     uint `json:"backup_source_id"`
+	BackupSourceName   string `json:"source_name"`
+	FullBackupSchedule string `json:"full_backup_schedule"`
+	IncrBackupSchedule string `json:"incr_backup_schedule"`
+	ScheduleDesc       string `json:"schedule_desc"`
+	StartTime          datatypes.Time `json:"start_time"`
+	BackupCycle        uint `json:"backup_cycle"`
 }
 
 type PolicyWithSource struct {
@@ -71,6 +72,7 @@ type DB interface {
 	SaveService(*policy.BackupSource, *policy.Policy, []schedules.Schedule) error
 	GetPolicies() ([]policy.Policy, error)
 	HasSource(ID uint) bool
+	SaveRepository(backendID, policyID uint, name string) error
 }
 
 func New(db DB, sched *schedules.TimeScheduler, scheduler *scheduler.Scheduler) *BackupService {
@@ -87,18 +89,18 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 
 	var schs []schedules.Schedule
 
-	sourceType := "file"
+	sourceType := "file-restic"
 
 	src := &policy.BackupSource{
 		SourceType: sourceType,
 		SourcePath: req.BackupSourcePath,
+		SourceName: req.BackupSourceName,
 	}
 
 	policy := &policy.Policy{
-		Retention:    req.Retention,
-		Status:       policy.ServiceStatusServing,
-		RepositoryID: req.RepositoryID,
-		Hostname:     req.Hostname,
+		Retention: req.Retention,
+		Status:    policy.ServiceStatusServing,
+		Hostname:  req.Hostname,
 	}
 
 	full := schedules.Schedule{Cron: req.FullBackupSchedule, StartTime: req.StartTime, IsEnabled: true}
@@ -110,13 +112,16 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 	// if s.hasSource(src.SourceName) {
 	// 	return ResourceAlreadyExistError
 	// }
-
 	// save source, policy, schedules to get ID
 	if err := s.db.SaveService(src, policy, schs); err != nil {
 		return err
 	}
 
 	if err := s.timeSched.AddSchedules(schs); err != nil {
+		return err
+	}
+
+	if err := s.db.SaveRepository(req.BackendID, policy.ID, src.SourceName); err != nil {
 		return err
 	}
 
@@ -174,7 +179,7 @@ func (s *BackupService) GetPolicies() ([]PolicyView, error) {
 
 func (s *BackupService) StartBackupJob(policyID uint, backupType string) error {
 	operator := "api"
-	s.scheduler.AddSchedulerJobBackup(policyID, backupType, operator)
+	s.scheduler.AddSchedulerJobBackup(policyID, backupType, operator) 
 	return nil
 }
 

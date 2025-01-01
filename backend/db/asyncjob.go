@@ -31,7 +31,8 @@ func (db *DB) LoadAgent(hostname string) (*agentd.Agent, error) {
 
 func (db *DB) LoadRepository(id uint) (*repository.Repository, error) {
 	var r repository.Repository
-	if result := db.g.First(&r, id); result.Error != nil {
+
+	if result := db.g.Preload("Backends").First(&r, id); result.Error != nil {
 		return nil, result.Error
 	}
 

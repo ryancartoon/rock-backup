@@ -32,6 +32,7 @@ type DB interface {
 	GetJobsInschedule() ([]JobInSchedule, error)
 	StartJob(id uint) error
 	GetBackupset(uint) (backupset.Backupset, error)
+	AllocateRepo(policyID uint) (repository.Repository, error)
 }
 
 type JobHandler interface {
@@ -174,11 +175,21 @@ func (s *Scheduler) DeleteBackup() error {
 	return nil
 }
 
+func (s *Scheduler) allocateRepo(policyID uint) (repository.Repository, error) {
+	return s.db.AllocateRepo(policyID)
+}
+
 func (s *Scheduler) AddSchedulerJobBackup(policyID uint, backupType string, operator string) error {
 	var job schedulerjob.Job
 	var jobType string
 
 	policy, err := s.db.GetPolicy(policyID)
+
+	if err != nil {
+		return err
+	}
+
+	repo, err := s.allocateRepo(policyID)
 
 	if err != nil {
 		return err
@@ -196,7 +207,7 @@ func (s *Scheduler) AddSchedulerJobBackup(policyID uint, backupType string, oper
 		Hostname:     policy.Hostname,
 		Priority:     5,
 		InSchedule:   true,
-		RepositoryID: policy.RepositoryID,
+		RepositoryID: repo.ID,
 		Status:       schedulerjob.SchedulerJobStatusCreated,
 	}
 

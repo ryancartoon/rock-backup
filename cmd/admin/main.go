@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
+	"log"
 	"net/http"
 	"net/url"
+	"strconv"
+
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -36,7 +39,15 @@ var jobAddCmd = &cobra.Command{
 		if jobType == "backup" {
 			app.StartBackup(policyID, backupType)
 		} else if jobType == "restore" {
-			app.StartRestore(policyID, backupsetID, targetPath)
+			id, err := strconv.Atoi(backupsetID)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = app.StartRestore(policyID, uint(id), targetPath)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	},
 }
@@ -61,8 +72,8 @@ func main() {
 	jobAddCmd.Flags().StringP("type", "t", "", "Type of the job (e.g., backup)")
 	jobAddCmd.Flags().StringP("backup_type", "b", "full", "Data type of the job (e.g., full, incremental)")
 	jobAddCmd.Flags().StringP("policy_id", "p", "0", "id of policy")
-	jobAddCmd.Flags().StringP("bset_id", "s", "0", "id of backupset")
-	jobAddCmd.Flags().StringP("target_path", "t", "0", "target path files are restored to")
+	// jobAddCmd.Flags().StringP("bset_id", "s", "0", "id of backupset")
+	// jobAddCmd.Flags().StringP("target_path", "t", "0", "target path files are restored to")
 
 	if err := cmdRoot.Execute(); err != nil {
 		panic(err)

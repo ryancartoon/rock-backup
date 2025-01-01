@@ -2,6 +2,7 @@ package db
 
 import (
 	"rockbackup/backend/policy"
+	"rockbackup/backend/repository"
 	"rockbackup/backend/schedules"
 
 	"gorm.io/gorm"
@@ -42,6 +43,22 @@ func (db *DB) SaveService(src *policy.BackupSource, policy *policy.Policy, schs 
 
 	return nil
 }
+
+func (db *DB) SaveRepository(backendID, policyID uint, name string) error {
+	item := repository.Repository{
+		Name:      name,
+		IsActive: true,
+		BackendID:backendID,
+		PolicyID:  policyID,
+	}
+
+	if result := db.g.Create(&item); result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
 
 func (db *DB) GetPolicies() ([]policy.Policy, error) {
 	var ps []policy.Policy
