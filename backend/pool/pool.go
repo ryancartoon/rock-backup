@@ -1,36 +1,31 @@
-package worker
+package pool
 
 import (
 	"context"
-	"rockbackup/backend/agentd"
-	"rockbackup/backend/policy"
-	"rockbackup/backend/repository"
+	"log"
 	"rockbackup/backend/schedulerjob"
 	"sync"
 )
 
-// Task represents a backup task
-type Task struct {
-	Agent      *agentd.Agent
-	BackupType string
-	Instance   policy.Instance
-	Repo       repository.Repository
-	TargetPath string
+type JobStarter interface {
+	StartJob(schedulerjob.Job) error
 }
 
+
 type JobPool struct {
-	jobChan  chan Task
+	jobChan  chan schedulerjob.Job
 	wg       sync.WaitGroup
 	ctx      context.Context
 	cancel   context.CancelFunc
 	maxprocs uint
+	JobStarter JobStarter
 }
 
 // NewWorker creates a new Worker instance
 func NewWorker() *JobPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &JobPool{
-		taskChan: make(chan Task),
+		jobChan: make(chan schedulerjob.Job),
 		ctx:      ctx,
 		cancel:   cancel,
 	}
@@ -47,19 +42,22 @@ func (p *JobPool) Start() {
 }
 
 // AddTask adds a new task to the worker's queue
-func (p *JobPool) AddTask(task Task) {
-	p.taskChan <- task
+func (p *JobPool) AddTask(job schedulerjob.Job) {
+	p.jobChan <- job
 }
 
 // processTask processes a single backup task
 func (w *JobPool) worker(ch chan schedulerjob.Job) {
 	for {
 		select {
-		case <-ctx.Done():
-			return
-		case job, ok = <-jobs:
+		case job, ok := <-ch:
 			if !ok {
 				return
+			}
+
+			err := w.JobStarter.StartJob(job)
+			if err != nil {
+				log.Printf("Error starting job: %v", err)
 			}
 		}
 
