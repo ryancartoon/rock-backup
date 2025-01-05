@@ -28,7 +28,7 @@ type PolicyView struct {
 	BackupSourceID uint   `json:"backup_source_id"`
 	Hostname       string `json:"hostname"`
 	Status         string `json:"status"`
-	RepositoryID   uint   `json:"repository_id"`
+	BackendID      uint   `json:"backend_id"`
 	// ScheduleDesc   string `json:"schedule_desc"`
 	// todo
 	// FullDay uint `json:"full_day"`
@@ -40,8 +40,9 @@ type PolicyRequest struct {
 	Retention          uint
 	BackupSourcePath   string
 	Hostname           string
-	RepositoryID       uint
+	BackendID          uint
 	BackupSourceID     uint
+	BackupSourceName   string
 	FullBackupSchedule string
 	IncrBackupSchedule string
 	ScheduleDesc       string
@@ -87,18 +88,19 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 
 	var schs []schedules.Schedule
 
-	sourceType := "file"
+	sourceType := "file-restic"
 
 	src := &policy.BackupSource{
 		SourceType: sourceType,
 		SourcePath: req.BackupSourcePath,
+		SourceName: req.BackupSourceName,
 	}
 
 	policy := &policy.Policy{
-		Retention:    req.Retention,
-		Status:       policy.ServiceStatusServing,
-		RepositoryID: req.RepositoryID,
-		Hostname:     req.Hostname,
+		Retention: req.Retention,
+		Status:    policy.ServiceStatusServing,
+		BackendID: req.BackendID,
+		Hostname:  req.Hostname,
 	}
 
 	full := schedules.Schedule{Cron: req.FullBackupSchedule, StartTime: req.StartTime, IsEnabled: true}

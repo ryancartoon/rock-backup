@@ -1,9 +1,8 @@
 package repository
 
 import (
+	"path/filepath"
 	"rockbackup/backend/backupset"
-
-	"gorm.io/gorm"
 )
 
 type RepositoryI interface {
@@ -11,33 +10,29 @@ type RepositoryI interface {
 }
 
 type RepositoryDB interface {
-	LoadRepository(id uint) (*Repository, error)
-	AddBackupset(repoID uint, jobID uint, backupTypte string) (*backupset.Backupset, error)
+	AddBackupset(RepoName string, BackendID uint, jobID uint, backupTypte string) (*backupset.Backupset, error)
 }
 
-func LoadRepo(db RepositoryDB, id uint) (*Repository, error) {
-	repo, err := db.LoadRepository(id)
-
-	if err != nil {
-		return nil, err
+func NewRepository(name string, backend *Backend, db RepositoryDB) *Repository {
+	return &Repository{
+		db:      db,
+		Name:    name,
+		Backend: backend,
 	}
-
-	repo.db = db
-
-	return repo, nil
 }
 
 type Repository struct {
-	gorm.Model
-	db         RepositoryDB `gorm:"-"`
-	ID         uint         `gorm:"primaryKey;autoIncrement"`
-	Name       string
-	Type       string
-	MountPoint string
+	db      RepositoryDB
+	Name    string
+	Backend *Backend
 }
 
 func (r *Repository) AddBackupset(jobID uint, backupType string) (*backupset.Backupset, error) {
-	return r.db.AddBackupset(r.ID, jobID, backupType)
+	return r.db.AddBackupset(r.Name, r.Backend.ID, jobID, backupType)
+}
+
+func (r *Repository) GetTarget() string {
+	return filepath.Join(r.Backend.Path, r.Name)
 }
 
 // func (r *Repository) SetExpireAt(bSetID uint, retention uint) erorr {

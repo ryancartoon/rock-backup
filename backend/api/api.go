@@ -33,7 +33,7 @@ type OpenServiceRequest struct {
 	IncrBackupSchedule string `json:"incr_backup_schedule"`
 	LogBackupSchedule  string `json:"log_backup_schedule"` // hours
 	StartTime          string `json:"start_time"`
-	RepositoryID       uint   `json:"repository_id"`
+	BackendID          uint   `json:"backend_id"`
 	Duration           uint   `json:"duration"`
 	BackupCycle        uint   `json:"backup_cycle"`
 }
@@ -207,7 +207,7 @@ func GenOpenFileServiceHandler(s service.BackupServiceI) func(*gin.Context) {
 		policyReq.BackupSourcePath = r.SourcePath
 		policyReq.Hostname = r.Hostname
 		policyReq.Retention = r.Retention
-		policyReq.RepositoryID = r.RepositoryID
+		policyReq.BackendID = r.BackendID
 		policyReq.BackupCycle = r.BackupCycle
 
 		//TODO:  verify schedules

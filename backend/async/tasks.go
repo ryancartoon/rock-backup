@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"rockbackup/backend/async/taskdef"
 	"rockbackup/backend/log"
-	"rockbackup/backend/schedulerjob"
 
 	"github.com/hibiken/asynq"
 	"github.com/spf13/viper"
@@ -14,7 +13,7 @@ import (
 
 var logger = log.New("worker-tasks.log")
 
-func MakeHandleBackupFileTask(config *viper.Viper, db DB, jobDB schedulerjob.JobDB) func(ctx context.Context, t *asynq.Task) error {
+func MakeHandleBackupFileTask(config *viper.Viper, db DB) func(ctx context.Context, t *asynq.Task) error {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p taskdef.BackupJobPayload
 
@@ -23,8 +22,9 @@ func MakeHandleBackupFileTask(config *viper.Viper, db DB, jobDB schedulerjob.Job
 		}
 		logger.Infof("handle job id: %d", p.ID)
 		logger.Infof("job input: %v", p)
-		factory := &Factory{db}
-		factory.StartBackupJobFile(ctx, p, jobDB)
+		starter := &Starter{db}
+
+		starter.StartFileBackupJobFile(ctx, p)
 
 		return nil
 	}

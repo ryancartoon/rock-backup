@@ -189,15 +189,15 @@ func (s *Scheduler) AddSchedulerJobBackup(policyID uint, backupType string, oper
 	}
 
 	job = schedulerjob.Job{
-		PolicyID:     policy.ID,
-		JobType:      jobType,
-		BackupType:   backupType,
-		Operator:     operator,
-		Hostname:     policy.Hostname,
-		Priority:     5,
-		InSchedule:   true,
-		RepositoryID: policy.RepositoryID,
-		Status:       schedulerjob.SchedulerJobStatusCreated,
+		PolicyID:   policy.ID,
+		JobType:    jobType,
+		BackupType: backupType,
+		Operator:   operator,
+		Hostname:   policy.Hostname,
+		Priority:   5,
+		InSchedule: true,
+		BackendID:  policy.BackendID,
+		Status:     schedulerjob.SchedulerJobStatusCreated,
 	}
 
 	s.newJobCh <- job
@@ -222,14 +222,14 @@ func (s *Scheduler) AddSchedulerJobRestore(policyID uint, backupsetID uint, targ
 	}
 
 	job = schedulerjob.Job{
-		PolicyID:     policy.ID,
-		JobType:      jobType,
-		Operator:     operator,
-		Hostname:     policy.Hostname,
-		Priority:     5,
-		InSchedule:   true,
-		RepositoryID: backupset.RepositoryID,
-		Status:       schedulerjob.SchedulerJobStatusCreated,
+		PolicyID:   policy.ID,
+		JobType:    jobType,
+		Operator:   operator,
+		Hostname:   policy.Hostname,
+		Priority:   5,
+		InSchedule: true,
+		BackendID:  backupset.BackendID,
+		Status:     schedulerjob.SchedulerJobStatusCreated,
 	}
 
 	s.newJobCh <- job

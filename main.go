@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"rockbackup/backend/agentd"
 	"rockbackup/backend/api"
 	"rockbackup/backend/async"
 	"rockbackup/backend/async/taskdef"
 	"rockbackup/backend/db"
 	"rockbackup/backend/keeperr"
 	"rockbackup/backend/log"
-	"rockbackup/backend/logbackup"
 	"rockbackup/backend/scheduler"
 	"rockbackup/backend/schedules"
 	"rockbackup/backend/service"
@@ -116,7 +114,7 @@ var cmdStartWorker = &cobra.Command{
 			},
 		)
 		mux := asynq.NewServeMux()
-		mux.HandleFunc(taskdef.TaskTypeBackupJobFile, async.MakeHandleBackupFileTask(Config, DB, DB))
+		mux.HandleFunc(taskdef.TaskTypeBackupJobFile, async.MakeHandleBackupFileTask(Config, DB))
 
 		if err := srv.Run(mux); err != nil {
 			logger.Fatalf("could not run server: %v", err)
@@ -130,8 +128,8 @@ var cmdScheduler = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		keer := keeperr.NewKeepErr()
-		agentd := agentd.NewAgentd()
-		logbackup := logbackup.NewDBLogWatch(keer, agentd)
+		// agentd := agentd.NewAgentd()
+		// logbackup := logbackup.NewDBLogWatch(keer, agentd)
 		asynqRedisOpt := asynq.RedisClientOpt{Addr: RedisOpt.Addr, DB: RedisOpt.DB, Password: RedisOpt.Password}
 		asynqClient := asynq.NewClient(asynqRedisOpt)
 		asyncHandler := scheduler.NewHandler(asynqClient)
@@ -147,11 +145,11 @@ var cmdScheduler = &cobra.Command{
 		BackupSvc := service.New(DB, tSched, JSched)
 		webapi := api.New(BackupSvc)
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			logbackup.Watch()
-		}()
+		// wg.Add(1)
+		// go func() {
+		// 	defer wg.Done()
+		// 	logbackup.Watch()
+		// }()
 
 		wg.Add(1)
 		go func() {

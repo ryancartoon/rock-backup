@@ -33,7 +33,7 @@ type ResticBackupResponse struct {
 }
 
 func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *repository.Repository) error {
-	args := []string{"init", "--repo", repo.MountPoint}
+	args := []string{"init", "--repo", repo.Backend.Path}
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
 
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *reposi
 }
 
 func (r *Restic) Backup(ctx context.Context, sourcePath string, agent *agentd.Agent, repo *repository.Repository) (string, int64, int64, error) {
-	args := []string{"backup", sourcePath, "--repo", repo.MountPoint}
+	args := []string{"backup", sourcePath, "--repo", repo.GetTarget()}
 	args = append(args, r.GlobalArgs...)
 
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
@@ -83,7 +83,7 @@ func (r *Restic) Backup(ctx context.Context, sourcePath string, agent *agentd.Ag
 }
 
 func (r *Restic) Restore(ctx context.Context, agent *agentd.Agent, repo *repository.Repository, bset *backupset.Backupset, target string) error {
-	args := []string{"restore", bset.ExternalBackupsetID, "--repo", repo.MountPoint, "--target", target}
+	args := []string{"restore", bset.ExternalBackupsetID, "--repo", repo.Backend.Path, "--target", target}
 	args = append(args, r.GlobalArgs...)
 
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)

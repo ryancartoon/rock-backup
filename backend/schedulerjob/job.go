@@ -6,6 +6,7 @@ import (
 
 	"database/sql/driver"
 	"encoding/json"
+
 	"gorm.io/gorm"
 	// "rockbackup/backend/host"
 	// "rockbackup/backend/repository"
@@ -50,7 +51,7 @@ type Job struct {
 	JobType      string     `gorm:"column:job_type"`
 	Status       string     `gorm:"column:status"`
 	Hostname     string     `gorm:"column:hostname"`
-	RepositoryID uint       `gorm:"column:repository_id"`
+	BackendID    uint       `gorm:"column:backend_id"`
 	Priority     uint       `gorm:"column:priority"`
 	InSchedule   bool       `gorm:"column:in_schedule"`
 	Operator     string     `gorm:"column:operator"`

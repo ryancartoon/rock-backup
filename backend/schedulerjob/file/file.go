@@ -45,7 +45,7 @@ func (j *FileBackupSchedulerJob) Run(
 ) error {
 	var err error
 
-	if j.BackupType == "Full" {
+	if j.BackupType == "full" {
 		logger.Info("full backup, init repo")
 		err = j.Restic.InitRepo(ctx, agent, repo)
 
