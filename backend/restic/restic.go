@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"path/filepath"
 	"rockbackup/backend/agentd"
 	"rockbackup/backend/backupset"
 	"rockbackup/backend/repository"
@@ -32,8 +33,9 @@ type ResticBackupResponse struct {
 	TotolDuration       float32 `json:"totol_duration"` // TODO check restic total duration data type
 }
 
-func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *repository.Repository) error {
-	args := []string{"init", "--repo", repo.Backend.Path}
+func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *repository.Repository, backupCycle string) error {
+	resticRepoPath := filepath.Join(repo.GetPath(), backupCycle)
+	args := []string{"init", "--repo", resticRepoPath}
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
 
 	if err != nil {
@@ -47,8 +49,9 @@ func (r *Restic) InitRepo(ctx context.Context, agent *agentd.Agent, repo *reposi
 	return nil
 }
 
-func (r *Restic) Backup(ctx context.Context, sourcePath string, agent *agentd.Agent, repo *repository.Repository) (string, int64, int64, error) {
-	args := []string{"backup", sourcePath, "--repo", repo.GetTarget()}
+func (r *Restic) Backup(ctx context.Context, sourcePath string, agent *agentd.Agent, repo *repository.Repository, backupCycle string) (string, int64, int64, error) {
+	resticRepoPath := filepath.Join(repo.GetPath(), backupCycle)
+	args := []string{"backup", sourcePath, "--repo", resticRepoPath}
 	args = append(args, r.GlobalArgs...)
 
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)
@@ -83,7 +86,8 @@ func (r *Restic) Backup(ctx context.Context, sourcePath string, agent *agentd.Ag
 }
 
 func (r *Restic) Restore(ctx context.Context, agent *agentd.Agent, repo *repository.Repository, bset *backupset.Backupset, target string) error {
-	args := []string{"restore", bset.ExternalBackupsetID, "--repo", repo.Backend.Path, "--target", target}
+	resticRepoPath := filepath.Join(repo.GetPath(), bset.BackupCycle)
+	args := []string{"restore", bset.ExternalBackupsetID, "--repo", resticRepoPath, "--target", target}
 	args = append(args, r.GlobalArgs...)
 
 	rc, stdout, _, err := agent.RunCmd(ctx, r.Name, args, r.Envs)

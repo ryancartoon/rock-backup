@@ -1,6 +1,8 @@
 
 
 
+##### repo, backend, host
+
 ##### start service
 
 go run main server

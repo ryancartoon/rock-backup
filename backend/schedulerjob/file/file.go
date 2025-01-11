@@ -9,6 +9,8 @@ import (
 	"rockbackup/backend/repository"
 	"rockbackup/backend/restic"
 	"rockbackup/backend/schedulerjob"
+	"strconv"
+	"time"
 )
 
 var logger = log.New("agent.log")
@@ -16,7 +18,8 @@ var logger = log.New("agent.log")
 func NewFileBackupSchedulerJob(job *schedulerjob.Job, log *log.Logger) *FileBackupSchedulerJob {
 	envs := []string{"RESTIC_PASSWORD=redhat"}
 	args := []string{"--json"}
-	restic := restic.Restic{Name: "/usr/bin/restic", Envs: envs, GlobalArgs: args}
+	// TODO add restic to config
+	restic := restic.Restic{Name: "restic", Envs: envs, GlobalArgs: args}
 
 	return &FileBackupSchedulerJob{*job, restic, log}
 }
@@ -44,18 +47,25 @@ func (j *FileBackupSchedulerJob) Run(
 	bset *backupset.Backupset,
 ) error {
 	var err error
+	var bsetBackupCycle string
 
+	// TODO add full as constant
 	if j.BackupType == "full" {
 		logger.Info("full backup, init repo")
-		err = j.Restic.InitRepo(ctx, agent, repo)
+		bsetBackupCycle = strconv.FormatInt(time.Now().Unix(), 10)
+		err = j.Restic.InitRepo(ctx, agent, repo, bsetBackupCycle)
 
 		if err != nil {
+			db.SaveBackupError(j.ID, err.Error())
 			return err
 		}
+	} else {
+		logger.Info("incremental backup, skip init repo")
+		bsetBackupCycle = policy.CurrentBackupCycleName
 	}
 
 	logger.Info("start to run restic backup")
-	snapID, size, fileNum, err := j.Restic.Backup(ctx, policy.BackupSource.SourcePath, agent, repo)
+	snapID, size, fileNum, err := j.Restic.Backup(ctx, policy.BackupSource.SourcePath, agent, repo, bsetBackupCycle)
 
 	logger.Infof("snap id is %s", snapID)
 	logger.Infof("snap size is %d", size)

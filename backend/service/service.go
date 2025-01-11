@@ -99,7 +99,6 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 	policy := &policy.Policy{
 		Retention: req.Retention,
 		Status:    policy.ServiceStatusServing,
-		BackendID: req.BackendID,
 		Hostname:  req.Hostname,
 	}
 
@@ -112,6 +111,8 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 	// if s.hasSource(src.SourceName) {
 	// 	return ResourceAlreadyExistError
 	// }
+	if err := s.db.SaveRepository(req.BackendID); err != nil {
+	}
 
 	// save source, policy, schedules to get ID
 	if err := s.db.SaveService(src, policy, schs); err != nil {

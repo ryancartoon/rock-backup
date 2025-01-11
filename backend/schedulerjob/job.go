@@ -51,7 +51,7 @@ type Job struct {
 	JobType      string     `gorm:"column:job_type"`
 	Status       string     `gorm:"column:status"`
 	Hostname     string     `gorm:"column:hostname"`
-	BackendID    uint       `gorm:"column:backend_id"`
+	RepositoryID uint       `gorm:"column:repository_id"`
 	Priority     uint       `gorm:"column:priority"`
 	InSchedule   bool       `gorm:"column:in_schedule"`
 	Operator     string     `gorm:"column:operator"`

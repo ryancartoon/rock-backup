@@ -16,7 +16,8 @@ type Backupset struct {
 	FileNum             uint64     `gorm:"column:file_num"`
 	rentention          int64      `gorm:"column:retention"`
 	BackupTime          *time.Time `gorm:"column:backup_time"`
-	BackendID           uint       `gorm:"column:backend_id"`
+	RepositoryID        uint       `gorm:"column:repository_id"`
 	JobID               uint       `gorm:"column:job_id"`
 	RepoName            string     `gorm:"column:repo_name"`
+	BackupCycle         string     `gorm:"column:backup_cycle"`
 }

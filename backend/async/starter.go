@@ -21,9 +21,10 @@ type DB interface {
 
 type StarterDB interface {
 	LoadJob(id uint) (*schedulerjob.Job, error)
-	LoadBackend(id uint) (*repository.Backend, error)
+	LoadRepository(id uint) (*repository.Repository, error)
 	LoadPolicy(id uint) (*policy.Policy, error)
 	LoadAgent(hostname string) (*agentd.Agent, error)
+	// LoadBackend(id uint) (*repository.Backend, error)
 }
 
 type Starter struct {
@@ -41,15 +42,15 @@ func (s *Starter) LoadJob(id uint) (*schedulerjob.Job, error) {
 	return s.db.LoadJob(id)
 }
 
-func (f *Starter) LoadRepo(name string, backendId uint) (*repository.Repository, error) {
+func (f *Starter) LoadRepo(repoID uint) (*repository.Repository, error) {
 	var repo *repository.Repository
-	backend, err := f.db.LoadBackend(backendId)
+	repo, err := f.db.LoadRepository(repoID)
 
 	if err != nil {
 		return nil, err
 	}
 
-	repo = repository.NewRepository(name, backend, f.db)
+	// repo = repository.NewRepository(name, backend, f.db)
 
 	return repo, nil
 }
@@ -71,24 +72,19 @@ func (s *Starter) StartFileBackupJobFile(ctx context.Context, p taskdef.BackupJo
 	}
 
 	log.Info("load policy")
-	policy, err := s.db.LoadPolicy(job.PolicyID)
 
+	policy, err := s.LoadPolicy(job.PolicyID)
 	if err != nil {
 		return err
 	}
 
 	log.Info("load repo")
-	policy, err = s.LoadPolicy(job.PolicyID)
+	repo, err := s.LoadRepo(policy.RepsoitoryID)
 	if err != nil {
 		return err
 	}
 
-	repo, err := s.LoadRepo(policy.BackupSource.SourceName, policy.BackendID)
-	if err != nil {
-		return err
-	}
-
-	bset, err := repo.AddBackupset(job.ID, job.BackupType)
+	bset, err := repo.AddBackupset(s.db, job.ID, job.BackupType)
 
 	if err != nil {
 		return err

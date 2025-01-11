@@ -33,6 +33,7 @@ func (d *DB) AutoMigrate() error {
 		&schedulerjob.Job{},
 		&backupset.Backupset{},
 		&repository.Backend{},
+		&repository.Repository{},
 	); err != nil {
 		return err
 	}

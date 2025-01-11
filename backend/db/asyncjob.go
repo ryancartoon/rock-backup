@@ -29,13 +29,14 @@ func (db *DB) LoadAgent(hostname string) (*agentd.Agent, error) {
 	return agent, nil
 }
 
-func (db *DB) LoadBackend(id uint) (*repository.Backend, error) {
-	var b repository.Backend
-	if result := db.g.First(&b, id); result.Error != nil {
+func (db *DB) LoadRepository(id uint) (*repository.Repository, error) {
+	var r repository.Repository
+
+	if result := db.g.Preload("Backends").First(&r, id); result.Error != nil {
 		return nil, result.Error
 	}
 
-	return &b, nil
+	return &r, nil
 }
 
 func (db *DB) LoadPolicy(id uint) (*policy.Policy, error) {
