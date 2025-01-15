@@ -79,7 +79,7 @@ func (s *Starter) StartFileBackupJobFile(ctx context.Context, p taskdef.BackupJo
 	}
 
 	log.Info("load repo")
-	repo, err := s.LoadRepo(policy.RepsoitoryID)
+	repo, err := s.LoadRepo(job.RepositoryID)
 	if err != nil {
 		return err
 	}

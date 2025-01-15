@@ -2,6 +2,7 @@ package db
 
 import (
 	"rockbackup/backend/backupset"
+	"rockbackup/backend/repository"
 	"rockbackup/backend/scheduler"
 	"rockbackup/backend/schedulerjob"
 )
@@ -53,6 +54,15 @@ func (db *DB) StartJob(id uint) error {
 	}
 
 	return nil
+}
+
+func (db *DB) AllocateRepo(id uint) (repository.Repository, error) {
+	var repo repository.Repository
+	if result := db.g.Model(&repository.Repository{}).Where("policy_id = ?", id).First(&repo); result.Error != nil {	
+		return repository.Repository{}, result.Error
+	}
+
+	return repo, nil
 }
 
 func (db *DB) GetBackupset(id uint) (bset backupset.Backupset, err error) {

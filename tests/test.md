@@ -1,7 +1,7 @@
 
-
-
 ##### repo, backend, host
+
+insert into backends ("name", "type", "path") values ("file1", "file-restic", "/tmp/rock-repo")
 
 ##### start service
 
@@ -17,7 +17,7 @@ content-type: application/json
 
 {
   "source_path": "/home/ryan/codes/backup-source-path",
-  "source_name": "rock-repo",
+  "source_name": "rock-file-backup-1",
   "hostname": "localhost",
   "backup_plan": 1,
   "retention": 1,
