@@ -112,16 +112,16 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 	// if s.hasSource(src.SourceName) {
 	// 	return ResourceAlreadyExistError
 	// }
-	if err := s.db.SaveRepository(req.BackendID, policy.ID, src.SourceName); err != nil {
-		return err
-	}
-
 	// save source, policy, schedules to get ID
 	if err := s.db.SaveService(src, policy, schs); err != nil {
 		return err
 	}
 
 	if err := s.timeSched.AddSchedules(schs); err != nil {
+		return err
+	}
+
+	if err := s.db.SaveRepository(req.BackendID, policy.ID, src.SourceName); err != nil {
 		return err
 	}
 
