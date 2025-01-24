@@ -57,6 +57,7 @@ type Job struct {
 	Operator     string     `gorm:"column:operator"`
 	ErrorMessage string     `gorm:"column:error_message"`
 	RunVar       JSONData   `gorm:"column:run_var"`
+	BackupStyle  string     `gorm:"column:backup_style"`
 	// ExternalBackupsetID string     `gorm:"column:external_backupset_id"`
 	// Size                int64      `gorm:"column:size"`
 	// FileNum             int64      `gorm:"column:file_num"`

@@ -10,6 +10,17 @@ import (
 	"rockbackup/backend/repository"
 )
 
+type Agent interface {
+	RunCmd(ctx context.Context, name string, args []string, envs []string, asRoot bool) (int, []byte, []byte, error)
+}
+
+func NewXtrabackup(version string, binaryPath string) *Xtrabackup {
+	return &Xtrabackup{
+		Version:    version,
+		BinaryPath: binaryPath,
+	}
+}
+
 type Xtrabackup struct {
 	Version    string
 	BinaryPath string
@@ -17,7 +28,7 @@ type Xtrabackup struct {
 
 func (x *Xtrabackup) Backup(
 	ctx context.Context,
-	agent *agentd.Agent,
+	agent Agent,
 	backupType string,
 	instance policy.Instance,
 	repo repository.Repository,
@@ -32,7 +43,8 @@ func (x *Xtrabackup) Backup(
 		"--datadir", instance.DataPath,
 		"--compress",
 	}
-	rc, stdout, _, err := agent.RunCmd(ctx, x.BinaryPath, args, envs)
+	asRoot := true
+	rc, stdout, _, err := agent.RunCmd(ctx, x.BinaryPath, args, envs, asRoot)
 
 	if err != nil {
 		return err
@@ -59,7 +71,6 @@ func (x *Xtrabackup) Restore(
 
 ) error {
 }
-
 
 func (x *Xtrabackup) DeleteBackupset(bset backupset.Backupset) error {
 	return nil

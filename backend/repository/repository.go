@@ -5,6 +5,10 @@ import (
 	"rockbackup/backend/backupset"
 )
 
+type BackendI interface {
+	Link()
+}
+
 type RepositoryI interface {
 	SaveSnapshot() error
 }

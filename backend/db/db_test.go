@@ -1,10 +1,11 @@
 package db
 
 import (
-	"github.com/stretchr/testify/assert"
 	"rockbackup/backend/schedules"
 	"rockbackup/backend/service"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func initServiceDB(t *testing.T) *DB {

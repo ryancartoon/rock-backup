@@ -16,6 +16,7 @@ message RunCmdRequest {
   string name = 1;
   repeated string args = 2;
   repeated string envs = 3;
+  bool as_root = 4;
 }
 
 message RunCmdReply {
