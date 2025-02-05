@@ -19,12 +19,26 @@ type OpenMysqlXtrabackupServiceRequest struct {
 	BaseBackupPolicy
 }
 
-func GenOpenMysqlXtrabackupFileServiceHandler(s service.BackupServiceI) func(*gin.Context) {
-	return func(c *gin.Context) {
-		var policyReq service.PolicyRequest
+func decodeServiceOpenMysqlXtrabackupReuqest(c *gin.Context) (OpenMysqlXtrabackupServiceRequest, error) {
+	var request OpenMysqlXtrabackupServiceRequest
 
-		logger.Info("request is received.")
-		r, err := decodeServoceOpenReuqest(c)
+	if err := c.BindJSON(&request); err != nil {
+		return OpenMysqlXtrabackupServiceRequest{}, err
+	}
+
+	// if err := verifyOpenServiceRequst(&request); err != nil {
+	// 	return nil, err
+	// }
+
+	return request, nil
+}
+
+func GenOpenMysqlXtrabackupServiceHandler(s service.BackupServiceI) func(*gin.Context) {
+	return func(c *gin.Context) {
+		var policyReq service.XtrabackupPolicyRequest
+
+		logger.Infof("request %v is received.", policyReq)
+		r, err := decodeServiceOpenMysqlXtrabackupReuqest(c)
 
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"error": err})

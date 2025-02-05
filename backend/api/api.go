@@ -82,7 +82,7 @@ func (a *WebAPI) NewRouter() *gin.Engine {
 		)
 	}))
 	r.POST("/service/file/open", GenOpenResticFileServiceHandler(a.ServiceEntry))
-	r.POST("/service/mysql/open", GenOpenResticFileServiceHandler(a.ServiceEntry))
+	r.POST("/service/mysql/open", GenOpenMysqlXtrabackupServiceHandler(a.ServiceEntry))
 	r.GET("/service/file/get", GenGetPolicyHandler(a.ServiceEntry))
 	r.POST("/backup/job", GenStartFileBackupJobHandler(a.ServiceEntry))
 	r.POST("/restore/job", GenStartFileRestoreJobHandler(a.ServiceEntry))

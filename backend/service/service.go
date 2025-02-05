@@ -36,18 +36,38 @@ type PolicyView struct {
 	// Schedules      []schedules.Schedule
 }
 
-type PolicyRequest struct {
-	Retention          uint `json:"retention"`
-	BackupSourcePath   string `json:"source_path"`
-	Hostname           string `json:"hostname"`
-	BackendID          uint `json:"backend_id"`
-	BackupSourceID     uint `json:"backup_source_id"`
-	BackupSourceName   string `json:"source_name"`
-	FullBackupSchedule string `json:"full_backup_schedule"`
-	IncrBackupSchedule string `json:"incr_backup_schedule"`
-	ScheduleDesc       string `json:"schedule_desc"`
+type ScheduleRequest struct {
+	FullBackupSchedule string         `json:"full_backup_schedule"`
+	IncrBackupSchedule string         `json:"incr_backup_schedule"`
+	ScheduleDesc       string         `json:"schedule_desc"`
 	StartTime          datatypes.Time `json:"start_time"`
-	BackupCycle        uint `json:"backup_cycle"`
+}
+
+type BasePolicyRequest struct {
+	Hostname  string `json:"hostname"`
+	Retention uint   `json:"retention"`
+	BackendID uint   `json:"backend_id"`
+}
+
+type XtrabackupPolicyRequest struct {
+	BasePolicyRequest
+	ScheduleRequest
+	InstanceName string `json:"source_name"`
+	DataPath     string `json:"data_path"`
+}
+
+type PolicyRequest struct {
+	Retention          uint           `json:"retention"`
+	BackupSourcePath   string         `json:"source_path"`
+	Hostname           string         `json:"hostname"`
+	BackendID          uint           `json:"backend_id"`
+	BackupSourceID     uint           `json:"backup_source_id"`
+	BackupSourceName   string         `json:"source_name"`
+	FullBackupSchedule string         `json:"full_backup_schedule"`
+	IncrBackupSchedule string         `json:"incr_backup_schedule"`
+	ScheduleDesc       string         `json:"schedule_desc"`
+	StartTime          datatypes.Time `json:"start_time"`
+	BackupCycle        uint           `json:"backup_cycle"`
 }
 
 type PolicyWithSource struct {
@@ -57,6 +77,7 @@ type PolicyWithSource struct {
 
 type BackupServiceI interface {
 	OpenFile(PolicyRequest) error
+	OpenXtrabackup(XtrabackupPolicyRequest) error
 	GetPolicies() ([]PolicyView, error)
 	StartBackupJob(policyID uint, backupType string) error
 	StartRestoreJob(policyID uint, backupsetID uint, targetPath string) error
@@ -128,6 +149,43 @@ func (s *BackupService) OpenFile(req PolicyRequest) error {
 	return nil
 }
 
+func (s *BackupService) OpenXtrabackup(req XtrabackupPolicyRequest) error {
+
+	var schs []schedules.Schedule
+
+	sourceType := "mysql-xtrabackup"
+
+	src := &policy.BackupSource{
+		SourceType: sourceType,
+		SourcePath: req.DataPath,
+		SourceName: req.InstanceName,
+	}
+
+	policy := &policy.Policy{
+		Retention: req.Retention,
+		Status:    policy.ServiceStatusServing,
+		Hostname:  req.Hostname,
+	}
+
+	full := schedules.Schedule{Cron: req.FullBackupSchedule, StartTime: req.StartTime, IsEnabled: true}
+	incr := schedules.Schedule{Cron: req.IncrBackupSchedule, StartTime: req.StartTime, IsEnabled: true}
+	schs = []schedules.Schedule{full, incr}
+
+	if err := s.db.SaveService(src, policy, schs); err != nil {
+		return err
+	}
+
+	if err := s.timeSched.AddSchedules(schs); err != nil {
+		return err
+	}
+
+	if err := s.db.SaveRepository(req.BackendID, policy.ID, src.SourceName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *BackupService) OpenDB(src policy.BackupSource, policy *policy.Policy, schs []schedules.Schedule) error {
 
 	if s.hasSource(src.SourceName) {
@@ -179,7 +237,7 @@ func (s *BackupService) GetPolicies() ([]PolicyView, error) {
 
 func (s *BackupService) StartBackupJob(policyID uint, backupType string) error {
 	operator := "api"
-	s.scheduler.AddSchedulerJobBackup(policyID, backupType, operator) 
+	s.scheduler.AddSchedulerJobBackup(policyID, backupType, operator)
 	return nil
 }
 
